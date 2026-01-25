@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "neuroglyph"
 version = "0.1.0"
@@ -13,3 +17,9 @@ dependencies = [
     "torch>=2.9.1",
     "transformers>=4.57.3",
 ]
+
+[project.scripts]
+gen-grpc = "tools.gen_grpc:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tools"]

@@ -26,3 +26,9 @@ class LanguageSpecResponse:
             hash=str(reply.hash),
             spec=spec,
         )
+
+
+@dataclass(frozen=True)
+class PredictResponse:
+    expected_token_kind_ids: list[int]
+    can_terminate_statement: bool

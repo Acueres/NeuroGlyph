@@ -5,7 +5,7 @@ from transformers import (
     AutoProcessor,
     Gemma3ForConditionalGeneration,
 )
-from language_server_interop import fetch_language_spec
+from language_server_interop import fetch_language_spec, fetch_expected
 
 MODEL_ID = "google/gemma-3-4b-it"
 
@@ -92,6 +92,14 @@ def main():
         root_cert_pem="./cert.pem"
     )
     print(spec.spec)
+
+    expected = fetch_expected(
+        "localhost:7162",
+        "def add(a: int, b: int)",
+        root_cert_pem="./cert.pem"
+    )
+
+    print(expected)
 
 
 if __name__ == "__main__":

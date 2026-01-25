@@ -1,9 +1,10 @@
 import grpc
-import compiler_pb2_grpc
+import proto.compiler_pb2_grpc
 
 from google.protobuf.empty_pb2 import Empty
 from typing import Optional
-from model.responses import LanguageSpecResponse
+from model.requests import PredictRequest
+from model.responses import LanguageSpecResponse, PredictResponse
 
 
 def _read_bytes(path: str) -> bytes:
@@ -13,7 +14,6 @@ def _read_bytes(path: str) -> bytes:
 
 def fetch_language_spec(
     target: str,
-    *,
     root_cert_pem: Optional[str] = None,
     timeout_s: float = 5.0,
 ) -> LanguageSpecResponse:
@@ -28,8 +28,35 @@ def fetch_language_spec(
     ]
 
     with grpc.secure_channel(target, creds, options=options) as channel:
-        stub = compiler_pb2_grpc.CompilerServiceStub(channel)
+        stub = proto.compiler_pb2_grpc.CompilerServiceStub(channel)
         reply = stub.GetLanguageSpec(Empty(), timeout=timeout_s)
 
     language_spec_response = LanguageSpecResponse.from_proto(reply)
     return language_spec_response
+
+
+def fetch_expected(
+    target: str,
+    text: str,
+    root_cert_pem: Optional[str] = None,
+    timeout_s: float = 5.0,
+) -> PredictResponse:
+    creds = grpc.ssl_channel_credentials(
+        root_certificates=_read_bytes(root_cert_pem) if root_cert_pem else None
+    )
+
+    options = [
+        ("grpc.keepalive_time_ms", 30_000),
+        ("grpc.keepalive_timeout_ms", 10_000),
+        ("grpc.http2.max_pings_without_data", 0),
+    ]
+
+    with grpc.secure_channel(target, creds, options=options) as channel:
+        stub = proto.compiler_pb2_grpc.CompilerServiceStub(channel)
+        request = PredictRequest(text=text)
+        reply = stub.PredictNext(request.to_proto(), timeout=timeout_s)
+
+    return PredictResponse(
+        expected_token_kind_ids=reply.expected_token_kind_ids,
+        can_terminate_statement=reply.can_terminate_statement,
+    )
