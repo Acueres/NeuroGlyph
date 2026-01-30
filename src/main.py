@@ -5,7 +5,7 @@ from transformers import (
     AutoProcessor,
     Gemma3ForConditionalGeneration,
 )
-from language_server_interop import fetch_language_spec, fetch_expected
+from compiler_client.fetchers import fetch_language_spec, fetch_expected
 
 MODEL_ID = "google/gemma-3-4b-it"
 

@@ -3,8 +3,8 @@ import proto.compiler_pb2_grpc
 
 from google.protobuf.empty_pb2 import Empty
 from typing import Optional
-from model.requests import PredictRequest
-from model.responses import LanguageSpecResponse, PredictResponse
+from .requests import PredictRequest
+from .responses import LanguageSpecResponse, PredictResponse
 
 
 def _read_bytes(path: str) -> bytes:
