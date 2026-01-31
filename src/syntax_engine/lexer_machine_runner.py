@@ -2,7 +2,7 @@ import regex as re
 
 from typing import Optional, Iterable
 from regex import Pattern
-from compiler_client.language_spec import (
+from src.compiler_client.language_spec import (
     LanguageSpec,
     LexerMachine,
     LexerTransition,
