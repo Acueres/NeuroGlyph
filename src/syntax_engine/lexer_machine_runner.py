@@ -94,6 +94,37 @@ class LexerMachineRunner:
 
         return bool(self._accepting.get(state, False))
 
+    @property
+    def start_state_id(self) -> int:
+        return self._machine.start_state_id
+
+    def is_accepting(self, state: int) -> bool:
+        return bool(self._accepting.get(state, False))
+
+    def advance_from_state(self, state: int, text: str) -> Optional[int]:
+        """
+        Consume `text` starting from `state`.
+        Returns next state, or None if no transition matches at some character.
+        """
+        s = state
+        for ch in text:
+            outs = self._transitions.get(s)
+            if not outs:
+                return None
+
+            next_state: Optional[int] = None
+            for t in outs:
+                if self._matches(t.predicate, ch):
+                    next_state = t.to_state_id
+                    break
+
+            if next_state is None:
+                return None
+
+            s = next_state
+
+        return s
+
     def _matches(self, predicate: str, ch: str) -> bool:
         if predicate == "*":
             return True
