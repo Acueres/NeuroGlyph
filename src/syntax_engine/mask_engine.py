@@ -22,14 +22,29 @@ class TokenMeta:
 
 
 class TriviaClassifier:
-    __slots__ = ("_trivia_chars",)
+    __slots__ = ("_trivia_chars", "_newline_char", "_line_comment_char")
 
-    def __init__(self, whitespace_chars: Iterable[str], newline_char: str):
+    def __init__(
+        self, whitespace_chars: Iterable[str], newline_char: str, line_comment_char: str
+    ):
         # Newline is trivia too.
-        self._trivia_chars = frozenset(set(whitespace_chars) | {newline_char})
+        self._trivia_chars = frozenset(
+            set(whitespace_chars) | {newline_char, line_comment_char}
+        )
+        self._newline_char = newline_char
+        self._line_comment_char = line_comment_char
 
     def is_trivia_char(self, ch: str) -> bool:
         return ch in self._trivia_chars
+
+    def contains_newline(self, s: str) -> bool:
+        for ch in s:
+            if ch == self._newline_char:
+                return True
+        return False
+
+    def is_comment_start(self, s: str) -> bool:
+        return s.startswith(self._line_comment_char)
 
     def strip_leading(self, s: str) -> tuple[str, bool]:
         i = 0
@@ -205,13 +220,18 @@ class MaskEngine:
         self._allow_special = allow_special_tokens
 
         trivia = TriviaClassifier(
-            spec.trivia.whitespace_chars, spec.trivia.newline_char
+            spec.trivia.whitespace_chars,
+            spec.trivia.newline_char,
+            spec.trivia.line_comment_start,
         )
 
         # Build TokenMeta and core_map for TokenTextTrie
         token_metas: dict[int, TokenMeta] = {}
         core_map: dict[int, str] = {}
         trivia_only_ids: list[int] = []
+        comment_start_ids: set[int] = set()
+        comment_body_ids: set[int] = set()
+        newline_ids: set[int] = set()
 
         special_ids = set(getattr(tokenizer, "all_special_ids", []) or [])
 
@@ -235,6 +255,12 @@ class MaskEngine:
                 skip_special_tokens=False,
                 clean_up_tokenization_spaces=False,
             )
+            contains_newline = trivia.contains_newline(token_text)
+            if contains_newline:
+                newline_ids.add(token_id)
+            else:
+                comment_body_ids.add(token_id)
+
             core, has_lead, has_trail, trivia_only = trivia.strip_both(token_text)
 
             meta = TokenMeta(
@@ -248,14 +274,21 @@ class MaskEngine:
             )
             token_metas[token_id] = meta
 
+            if trivia.is_comment_start(core):
+                comment_start_ids.add(token_id)
+
             if trivia_only:
                 trivia_only_ids.append(token_id)
                 continue
+
             if core != "":
                 core_map[token_id] = core
 
         self._token_meta = token_metas
         self._trivia_only_ids = tuple(trivia_only_ids)
+        self._comment_start_ids = comment_start_ids
+        self._comment_body_ids = comment_body_ids
+        self._newline_ids = newline_ids
 
         token_text_trie = TokenTextTrie(core_map)
 
@@ -279,6 +312,7 @@ class MaskEngine:
         self._active: list[Candidate] = []
         self._committed: bool = False
         self._finishing_candidates: list[Candidate] = []
+        self._in_line_comment: bool = False
 
     # ---------- Public API ----------
 
@@ -304,6 +338,9 @@ class MaskEngine:
     def allowed_token_ids(self) -> set[int]:
         if not self._active:
             return set()
+
+        if self._in_line_comment:
+            return self._comment_body_ids
 
         at_start = not self._committed
 
@@ -342,6 +379,13 @@ class MaskEngine:
         # Trivia-only: allowed only at boundary
         if meta.is_trivia_only:
             if not self._committed:
+                return
+
+            if self._in_line_comment and meta.token_id in self._newline_ids:
+                self._in_line_comment = False
+
+            if meta.token_id in self._comment_start_ids:
+                self._in_line_comment = True
                 return
 
             if self.can_finish_pattern():

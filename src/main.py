@@ -122,7 +122,7 @@ def predict_next_token_kinds(prefix_code: str) -> PredictResponse:
 def main():
     generator = Gemma3CodeGenerator()
     code = generator.chat(
-        "Task: Generate a main function that prints 'Hello Glykon'.",
+        "Task: Generate a main function that calls function 'hello'. The function 'hello' prints 'Hello Glykon'.",
         """You are NeuroGlyph, a code generator for the Glykon language.
 
 Output ONLY Glykon code (no prose). You MAY include brief comments starting with #, but comments must be in English.
