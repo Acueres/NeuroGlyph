@@ -37,7 +37,7 @@ class Gemma3CodeGenerator:
         response = fetch_language_spec("localhost:7162", root_cert_pem="./cert.pem")
         self.engine = MaskEngine(response.spec, self.tokenizer)
 
-    def chat(self, user_text: str, system_prompt: str) -> str:
+    def generate(self, user_text: str, system_prompt: str) -> str:
         messages = [
             {"role": "system", "content": [{"type": "text", "text": system_prompt}]},
             {"role": "user", "content": [{"type": "text", "text": user_text}]},
@@ -61,7 +61,7 @@ class Gemma3CodeGenerator:
         last_seen_len = input_len
 
         can_terminate_stmt = False
-        eos_id = self.tokenizer.eos_token_id
+        stop_ids = get_stop_ids(self.tokenizer, self.model)
 
         def mask_fn(batch_id: int, input_ids: torch.Tensor) -> list[int]:
             nonlocal last_seen_len, can_terminate_stmt
@@ -97,7 +97,8 @@ class Gemma3CodeGenerator:
                 can_terminate_stmt = bool(response.can_terminate_statement)
 
             allowed = self.engine.allowed_token_ids()
-            allowed.add(int(eos_id))
+            for sid in stop_ids:
+                allowed.add(sid)
 
             return list(allowed)
 
@@ -106,8 +107,9 @@ class Gemma3CodeGenerator:
                 **inputs,
                 max_new_tokens=self.config.max_new_tokens,
                 do_sample=True,
-                eos_token_id=eos_id,
+                eos_token_id=stop_ids,
                 prefix_allowed_tokens_fn=mask_fn,
+                renormalize_logits=True,
             )[0]
 
         completion_ids = generated[input_len:]
@@ -119,13 +121,45 @@ def predict_next_token_kinds(prefix_code: str) -> PredictResponse:
     return response
 
 
+def get_stop_ids(tokenizer, model) -> list[int]:
+    ids: list[int] = []
+
+    # generation_config eos (can be int or list[int])
+    gen_eos = getattr(getattr(model, "generation_config", None), "eos_token_id", None)
+    if isinstance(gen_eos, int):
+        ids.append(gen_eos)
+    elif isinstance(gen_eos, (list, tuple)):
+        ids.extend(int(x) for x in gen_eos if x is not None)
+
+    # tokenizer eos
+    if tokenizer.eos_token_id is not None:
+        ids.append(int(tokenizer.eos_token_id))
+
+    # Gemma IT stop token: <end_of_turn>
+    try:
+        eot = tokenizer.convert_tokens_to_ids("<end_of_turn>")
+        if isinstance(eot, int) and eot >= 0:
+            ids.append(int(eot))
+    except Exception:
+        pass
+
+    # de-dup, keep order
+    out = []
+    seen = set()
+    for x in ids:
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out
+
+
 def main():
     generator = Gemma3CodeGenerator()
-    code = generator.chat(
+    code = generator.generate(
         "Task: Generate a main function that calls function 'hello'. The function 'hello' prints 'Hello Glykon'.",
         """You are NeuroGlyph, a code generator for the Glykon language.
 
-Output ONLY Glykon code (no prose). You MAY include brief comments starting with #, but comments must be in English.
+Output ONLY Glykon code (no prose). You may include brief comments starting with #, but comments must be in English.
 Use ASCII identifiers only.
 
 Glykon basics:
