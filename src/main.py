@@ -60,11 +60,11 @@ class Gemma3CodeGenerator:
         # Track how many tokens we have already "replayed" into the engine
         last_seen_len = input_len
 
-        can_terminate_stmt = False
+        can_end = False
         stop_ids = get_stop_ids(self.tokenizer, self.model)
 
         def mask_fn(batch_id: int, input_ids: torch.Tensor) -> list[int]:
-            nonlocal last_seen_len, can_terminate_stmt
+            nonlocal last_seen_len, can_end
 
             cur_len = int(input_ids.shape[-1])
 
@@ -88,17 +88,19 @@ class Gemma3CodeGenerator:
             if self.engine.needs_predictions():
                 response = predict_next_token_kinds("".join(completion_parts))
                 self.engine.set_predictions(response.expected_token_kind_ids)
-                can_terminate_stmt = bool(response.can_terminate_statement)
+                can_end = bool(response.can_end_input)
             # If the current pattern is already in an accepting state, we also need "post" prediction
             # (what could come next *if we stop the pattern here*), so we can mask delimiters like ')', ',', '}', etc.
             elif self.engine.needs_post_predictions():
                 response = predict_next_token_kinds("".join(completion_parts))
                 self.engine.set_post_predictions(response.expected_token_kind_ids)
-                can_terminate_stmt = bool(response.can_terminate_statement)
+                can_end = bool(response.can_end_input)
 
             allowed = self.engine.allowed_token_ids()
-            for sid in stop_ids:
-                allowed.add(sid)
+
+            if can_end:
+                for sid in stop_ids:
+                    allowed.add(sid)
 
             return list(allowed)
 

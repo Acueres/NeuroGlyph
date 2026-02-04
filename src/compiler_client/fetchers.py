@@ -59,4 +59,5 @@ def fetch_expected(
     return PredictResponse(
         expected_token_kind_ids=reply.expected_token_kind_ids,
         can_terminate_statement=reply.can_terminate_statement,
+        can_end_input=reply.can_end_input
     )

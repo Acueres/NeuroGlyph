@@ -25,4 +25,5 @@ message PredictRequest {
 message PredictReply {
   repeated int32 expected_token_kind_ids = 1;
   bool can_terminate_statement = 2;
+  bool can_end_input = 3;
 }

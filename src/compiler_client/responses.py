@@ -32,3 +32,4 @@ class LanguageSpecResponse:
 class PredictResponse:
     expected_token_kind_ids: list[int]
     can_terminate_statement: bool
+    can_end_input: bool
