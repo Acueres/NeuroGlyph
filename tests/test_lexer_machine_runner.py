@@ -6,7 +6,7 @@ from src.compiler_client.language_spec import (
     LexerState,
     LexerTransition,
 )
-from src.syntax_engine.lexer_machine_runner import LexerMachineRunner
+from src.syntax.lexer_machine_runner import LexerMachineRunner
 
 
 # =========================

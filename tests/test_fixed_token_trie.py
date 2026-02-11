@@ -1,7 +1,7 @@
 import pytest
 
 from dataclasses import dataclass
-from src.syntax_engine.fixed_token_trie import (
+from src.syntax.fixed_token_trie import (
     TokenTextTrie,
     FixedTokenTrie,
     FixedTokenTrieRepository,

@@ -258,8 +258,8 @@ class MaskEngine:
             contains_newline = trivia.contains_newline(token_text)
             if contains_newline:
                 newline_ids.add(token_id)
-            else:
-                comment_body_ids.add(token_id)
+
+            comment_body_ids.add(token_id)
 
             core, has_lead, has_trail, trivia_only = trivia.strip_both(token_text)
 
@@ -314,18 +314,28 @@ class MaskEngine:
         self._finishing_candidates: list[Candidate] = []
         self._in_line_comment: bool = False
 
+        # Pattern-based limitation by length
+        self._committed_pattern_core_len = 0
+        self._committed_pattern_kind_id: int | None = None
+        self._max_pattern_chars: dict[int, int] = {
+            m.token_kind_id: m.max_lexeme_chars for m in spec.lexer_machines
+        }
+
     # ---------- Public API ----------
 
     def set_predictions(self, token_kind_ids: Sequence[int]) -> None:
         # Boundary reset
-        uniq = []
+        unique = []
         seen = set()
         for k in token_kind_ids:
             if k not in seen:
                 seen.add(k)
-                uniq.append(int(k))
+                unique.append(int(k))
 
-        self._predicted_kind_ids = tuple(uniq)
+        self._predicted_kind_ids = tuple(unique)
+
+        self._committed_pattern_core_len = 0
+        self._committed_pattern_kind_id = None
 
         for k in self._predicted_kind_ids:
             cand = self._make_candidate(k)
@@ -356,8 +366,18 @@ class MaskEngine:
         if (
             self._committed
             and self.can_finish_pattern()
-            and len(self._finishing_candidates) > 0
         ):
+            kind = self._committed_pattern_kind_id
+            token_limit = self._max_pattern_chars.get(kind) if kind is not None else None
+
+            if token_limit is not None and self._committed_pattern_core_len >= token_limit:
+                allowed_set = set()
+                if self._finishing_candidates:
+                    for c in self._finishing_candidates:
+                        allowed_set.update(c.allowed_token_ids(at_start=True))
+                allowed_set.update(self._trivia_only_ids)
+                return allowed_set
+
             # boundary-start masks for post candidates
             for c in self._finishing_candidates:
                 allowed_set.update(c.allowed_token_ids(at_start=True))
@@ -372,7 +392,7 @@ class MaskEngine:
                 "MaskEngine.consume() called without active predictions."
             )
 
-        meta = self._token_meta.get(token_id)
+        meta = self._token_meta[token_id]
         if meta is None:
             raise KeyError(f"Unknown token id: {token_id}")
 
@@ -392,6 +412,9 @@ class MaskEngine:
                 self._active = []
                 self._committed = False
                 self._finishing_candidates = []
+
+                self._committed_pattern_core_len = 0
+                self._committed_pattern_kind_id = None
                 return
 
             raise RuntimeError(
@@ -428,6 +451,20 @@ class MaskEngine:
         self._active = new_active
         self._committed = True
 
+        if at_start:
+            self._committed_pattern_kind_id = None
+            self._committed_pattern_core_len = 0
+
+            # Remember the pattern
+            for c in self._active:
+                if isinstance(c, PatternCandidate):
+                    self._committed_pattern_kind_id = c.token_kind_id()
+                    break
+
+        # If we are in a pattern, accumulate core length
+        if self._committed_pattern_kind_id is not None and meta.core:
+            self._committed_pattern_core_len += len(meta.core)
+
         # Fixed tokens have unambiguous completion
         completed_fixed = [
             c for c in self._active if isinstance(c, FixedCandidate) and c.is_complete()
@@ -435,6 +472,9 @@ class MaskEngine:
         if completed_fixed:
             self._active = []
             self._committed = False
+
+            self._committed_pattern_kind_id = None
+            self._committed_pattern_core_len = 0
 
     def can_finish_pattern(self) -> bool:
         """

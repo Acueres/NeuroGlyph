@@ -151,6 +151,7 @@ class LexerMachine:
     start_state_id: int
     states: tuple[LexerState, ...]
     transitions: tuple[LexerTransition, ...]
+    max_lexeme_chars: int
 
     @staticmethod
     def from_dict(d: Mapping[str, Any]) -> "LexerMachine":
@@ -173,12 +174,15 @@ class LexerMachine:
                 LexerTransition.from_dict(_as_dict(x, f"{ctx}.transitions[{i}]"))
                 for i, x in enumerate(trans_raw)
             ),
+            max_lexeme_chars=_as_int(_req(dd, "maxLexemeChars", ctx), f"{ctx}.maxLexemeChars")
         )
 
 
 @dataclass(frozen=True, slots=True)
 class LanguageSpec:
     spec_version: str
+    grammar_ebnf: str
+    grammar_prompt: str
     tokens: tuple[TokenInfo, ...]
     fixed_tokens: tuple[FixedToken, ...]
     lexer_machines: tuple[LexerMachine, ...]
@@ -196,6 +200,8 @@ class LanguageSpec:
 
         return LanguageSpec(
             spec_version=_as_str(_req(dd, "specVersion", ctx), f"{ctx}.specVersion"),
+            grammar_ebnf=_as_str(_req(dd, "grammarEbnf", ctx), f"{ctx}.grammarEbnf"),
+            grammar_prompt=_as_str(_req(dd, "grammarPrompt", ctx), f"{ctx}.grammarPrompt"),
             tokens=tuple(
                 TokenInfo.from_dict(_as_dict(x, f"{ctx}.tokens[{i}]"))
                 for i, x in enumerate(tokens_raw)
