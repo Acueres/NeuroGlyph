@@ -59,6 +59,7 @@ def _single_line_string_machine() -> LexerMachine:
         start_state_id=0,
         states=states,
         transitions=tr,
+        max_lexeme_chars=256
     )
 
 
@@ -111,6 +112,7 @@ def _multiline_string_machine() -> LexerMachine:
         start_state_id=0,
         states=states,
         transitions=tr,
+        max_lexeme_chars=256
     )
 
 
@@ -133,6 +135,7 @@ def _identifier_machine() -> LexerMachine:
         start_state_id=0,
         states=states,
         transitions=tr,
+        max_lexeme_chars=32
     )
 
 
@@ -154,6 +157,7 @@ def _integer_machine() -> LexerMachine:
         start_state_id=0,
         states=states,
         transitions=tr,
+        max_lexeme_chars=32
     )
 
 
@@ -188,6 +192,7 @@ def _real_machine() -> LexerMachine:
         start_state_id=0,
         states=states,
         transitions=tr,
+        max_lexeme_chars=32
     )
 
 
@@ -216,6 +221,7 @@ def test_transition_order_is_first_match_priority() -> None:
             LexerTransition(0, "*", 1),
             LexerTransition(0, "lit:a", 2),
         ),
+        max_lexeme_chars=32
     )
     m_b = LexerMachine(
         token_kind_id=9001,
@@ -225,6 +231,7 @@ def test_transition_order_is_first_match_priority() -> None:
             LexerTransition(0, "lit:a", 2),
             LexerTransition(0, "*", 1),
         ),
+        max_lexeme_chars=32
     )
 
     assert LexerMachineRunner(m_a).accepts("a") is False

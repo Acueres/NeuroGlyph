@@ -45,6 +45,11 @@ class CompilerServiceStub(object):
                 request_serializer=compiler__pb2.PredictRequest.SerializeToString,
                 response_deserializer=compiler__pb2.PredictReply.FromString,
                 _registered_method=True)
+        self.GetSemanticHints = channel.unary_unary(
+                '/glykon.compiler.CompilerService/GetSemanticHints',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=compiler__pb2.SemanticHintsReply.FromString,
+                _registered_method=True)
 
 
 class CompilerServiceServicer(object):
@@ -62,6 +67,12 @@ class CompilerServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetSemanticHints(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_CompilerServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -74,6 +85,11 @@ def add_CompilerServiceServicer_to_server(servicer, server):
                     servicer.PredictNext,
                     request_deserializer=compiler__pb2.PredictRequest.FromString,
                     response_serializer=compiler__pb2.PredictReply.SerializeToString,
+            ),
+            'GetSemanticHints': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetSemanticHints,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=compiler__pb2.SemanticHintsReply.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -130,6 +146,33 @@ class CompilerService(object):
             '/glykon.compiler.CompilerService/PredictNext',
             compiler__pb2.PredictRequest.SerializeToString,
             compiler__pb2.PredictReply.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetSemanticHints(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/glykon.compiler.CompilerService/GetSemanticHints',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            compiler__pb2.SemanticHintsReply.FromString,
             options,
             channel_credentials,
             insecure,

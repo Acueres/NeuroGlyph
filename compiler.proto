@@ -9,6 +9,7 @@ import "google/protobuf/empty.proto";
 service CompilerService {
   rpc GetLanguageSpec(google.protobuf.Empty) returns (LanguageSpecReply);
   rpc PredictNext(PredictRequest) returns (PredictReply);
+  rpc GetSemanticHints(google.protobuf.Empty) returns (SemanticHintsReply);
 }
 
 message LanguageSpecReply {
@@ -26,4 +27,9 @@ message PredictReply {
   repeated int32 expected_token_kind_ids = 1;
   bool can_terminate_statement = 2;
   bool can_end_input = 3;
+  bool type_name_context = 4;
+}
+
+message SemanticHintsReply {
+  repeated string preferred_lexemes = 1;
 }

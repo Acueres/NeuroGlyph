@@ -4,7 +4,7 @@ import proto.compiler_pb2_grpc
 from google.protobuf.empty_pb2 import Empty
 from typing import Optional
 from .requests import PredictRequest
-from .responses import LanguageSpecResponse, PredictResponse
+from .responses import LanguageSpecResponse, PredictResponse, SemanticHintsResponse
 
 
 def _read_bytes(path: str) -> bytes:
@@ -59,5 +59,29 @@ def fetch_expected(
     return PredictResponse(
         expected_token_kind_ids=reply.expected_token_kind_ids,
         can_terminate_statement=reply.can_terminate_statement,
-        can_end_input=reply.can_end_input
+        can_end_input=reply.can_end_input,
+        type_name_context=reply.type_name_context,
     )
+
+
+def fetch_semantic_hints(
+    target: str,
+    root_cert_pem: Optional[str] = None,
+    timeout_s: float = 5.0,
+) -> SemanticHintsResponse:
+
+    creds = grpc.ssl_channel_credentials(
+        root_certificates=_read_bytes(root_cert_pem) if root_cert_pem else None
+    )
+
+    options = [
+        ("grpc.keepalive_time_ms", 30_000),
+        ("grpc.keepalive_timeout_ms", 10_000),
+        ("grpc.http2.max_pings_without_data", 0),
+    ]
+
+    with grpc.secure_channel(target, creds, options=options) as channel:
+        stub = proto.compiler_pb2_grpc.CompilerServiceStub(channel)
+        reply = stub.GetSemanticHints(Empty(), timeout=timeout_s)
+
+    return SemanticHintsResponse(preferred_lexemes=reply.preferred_lexemes)

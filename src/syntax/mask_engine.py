@@ -1,3 +1,5 @@
+import zlib
+
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Optional, Sequence
 from compiler_client.language_spec import LanguageSpec, LexerMachine
@@ -291,6 +293,7 @@ class MaskEngine:
         self._newline_ids = newline_ids
 
         token_text_trie = TokenTextTrie(core_map)
+        self._token_text_trie = token_text_trie
 
         # Fixed tokens phase
         fixed_tables: dict[int, FixedTokenTable] = {}
@@ -306,6 +309,8 @@ class MaskEngine:
             spec.lexer_machines, core_map, token_metas
         )
         self._lexer_tables = lexer_tables
+
+        self._semantic_lexeme_tables: list[FixedTokenTable] = []
 
         # Runtime state
         self._predicted_kind_ids: tuple[int, ...] = tuple()
@@ -334,16 +339,18 @@ class MaskEngine:
 
         self._predicted_kind_ids = tuple(unique)
 
+        self._active = []
+        self._committed = False
         self._committed_pattern_core_len = 0
         self._committed_pattern_kind_id = None
+        self._finishing_candidates = []
+        self._semantic_lexeme_tables = []
 
         for k in self._predicted_kind_ids:
             cand = self._make_candidate(k)
             if cand is None:
                 continue
             self._active.append(cand)
-
-        self._committed = False
 
     def allowed_token_ids(self) -> set[int]:
         if not self._active:
@@ -363,14 +370,16 @@ class MaskEngine:
         if not self._committed:
             allowed_set.update(self._trivia_only_ids)
 
-        if (
-            self._committed
-            and self.can_finish_pattern()
-        ):
+        if self._committed and self.can_finish_pattern():
             kind = self._committed_pattern_kind_id
-            token_limit = self._max_pattern_chars.get(kind) if kind is not None else None
+            token_limit = (
+                self._max_pattern_chars.get(kind) if kind is not None else None
+            )
 
-            if token_limit is not None and self._committed_pattern_core_len >= token_limit:
+            if (
+                token_limit is not None
+                and self._committed_pattern_core_len >= token_limit
+            ):
                 allowed_set = set()
                 if self._finishing_candidates:
                     for c in self._finishing_candidates:
@@ -535,6 +544,30 @@ class MaskEngine:
 
     def is_trivia_only_token(self, token_id: int) -> bool:
         return self._token_meta[token_id].is_trivia_only
+
+    def compile_lexeme_table(self, lexeme: str) -> FixedTokenTable:
+        """
+        Compile a FixedTokenTable for an arbitrary lexeme.
+        """
+        lexeme = str(lexeme)
+        # Uses a stable negative id so it never collides with real token kinds.
+        token_kind_id = -int(zlib.crc32(lexeme.encode("utf-8")))
+
+        trie = FixedTokenTrie.compile(lexeme, self._token_text_trie)
+        return self._build_fixed_table(token_kind_id, lexeme, trie, self._token_meta)
+
+    def add_semantic_lexeme_tables(self, tables: Sequence[FixedTokenTable]) -> None:
+        """
+        Add semantic fixed-lexeme candidates for the current boundary prediction.
+        Call after set_predictions() and only when not committed.
+        """
+        if self._committed:
+            return
+
+        self._semantic_lexeme_tables = list(tables)
+
+        for t in tables:
+            self._active.append(FixedCandidate(t, 0))
 
     # ---------- Internals ----------
 

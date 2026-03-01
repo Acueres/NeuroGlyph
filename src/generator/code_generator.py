@@ -6,8 +6,13 @@ from transformers import (
     Gemma3ForConditionalGeneration,
 )
 from compiler_client.responses import PredictResponse
-from compiler_client.fetchers import fetch_language_spec, fetch_expected
+from compiler_client.fetchers import (
+    fetch_language_spec,
+    fetch_expected,
+    fetch_semantic_hints,
+)
 from syntax.mask_engine import MaskEngine
+from semantics.semantic_hints import SemanticHintsCache
 from .system_prompt import build_system_prompt
 
 MODEL_ID = "google/gemma-3-4b-it"
@@ -35,10 +40,19 @@ class Gemma3CodeGenerator:
         self.processor = AutoProcessor.from_pretrained(self.config.model_id)
         self.tokenizer = self.processor.tokenizer
 
-        response = fetch_language_spec("localhost:7162", root_cert_pem="./cert.pem")
-        self.engine = MaskEngine(response.spec, self.tokenizer)
+        lang_spec_response = fetch_language_spec(
+            "localhost:7162", root_cert_pem="./cert.pem"
+        )
+        self.engine = MaskEngine(lang_spec_response.spec, self.tokenizer)
         self.system_prompt = build_system_prompt(
-            response.spec, language_name=response.language
+            lang_spec_response.spec, language_name=lang_spec_response.language
+        )
+
+        semantic_hints_reply = fetch_semantic_hints(
+            "localhost:7162", root_cert_pem="./cert.pem"
+        )
+        self.semantic_cache = SemanticHintsCache(
+            self.engine, semantic_hints_reply.preferred_lexemes
         )
 
     def generate(self, user_text: str) -> str:
@@ -89,17 +103,26 @@ class Gemma3CodeGenerator:
                 self.engine.consume(tid)
                 last_seen_len += 1
 
+            is_type_context = False
+            
             # If we’re at a boundary and have no active predictions, fetch new ones
             if self.engine.needs_predictions():
                 response = predict_next_token_kinds("".join(completion_parts))
                 self.engine.set_predictions(response.expected_token_kind_ids)
                 can_end = bool(response.can_end_input)
+                is_type_context = bool(response.type_name_context)
+
+
             # If the current pattern is already in an accepting state, we also need "post" prediction
             # (what could come next *if we stop the pattern here*), so we can mask delimiters like ')', ',', '}', etc.
             elif self.engine.needs_post_predictions():
                 response = predict_next_token_kinds("".join(completion_parts))
                 self.engine.set_post_predictions(response.expected_token_kind_ids)
                 can_end = bool(response.can_end_input)
+                is_type_context = bool(response.type_name_context)
+
+            if is_type_context:
+                self.semantic_cache.apply_type_hints()
 
             allowed = self.engine.allowed_token_ids()
 
