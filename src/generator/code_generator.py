@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from transformers import (
     AutoProcessor,
     Gemma3ForConditionalGeneration,
+    LogitsProcessorList,
 )
 from compiler_client.responses import PredictResponse
 from compiler_client.fetchers import (
@@ -13,6 +14,7 @@ from compiler_client.fetchers import (
 )
 from syntax.mask_engine import MaskEngine
 from semantics.semantic_hints import SemanticHintsCache
+from .weight_engine import WeightEngine, WeightLogitsProcessor, WeightConfig
 from .system_prompt import build_system_prompt
 
 MODEL_ID = "google/gemma-3-4b-it"
@@ -55,6 +57,20 @@ class Gemma3CodeGenerator:
             self.engine, semantic_hints_reply.preferred_lexemes
         )
 
+        self._current_biases: dict[int, float] = {}
+
+        self.weight_engine = WeightEngine(
+            self.engine,
+            preferred_lexemes=semantic_hints_reply.preferred_lexemes,
+            config=WeightConfig(
+                root_boost=1.5,
+                semantic_boost=3.0,
+                stop_boost=0.8,
+            ),
+            root_lexemes=[root.literal for root in lang_spec_response.spec.root_tokens],
+        )
+        self.weight_processor = WeightLogitsProcessor(self._current_biases)
+
     def generate(self, user_text: str) -> str:
         prompt = f"{self.system_prompt}\n\n" f"Task:\n{user_text}\n"
 
@@ -85,6 +101,8 @@ class Gemma3CodeGenerator:
         def mask_fn(batch_id: int, input_ids: torch.Tensor) -> list[int]:
             nonlocal last_seen_len, can_end
 
+            self._current_biases.clear()
+
             cur_len = int(input_ids.shape[-1])
 
             # Replay any newly generated tokens into the engine
@@ -103,32 +121,45 @@ class Gemma3CodeGenerator:
                 self.engine.consume(tid)
                 last_seen_len += 1
 
-            is_type_context = False
-            
+            response = None
+            semantic_symbol_context = False
+            root_start = False
+
             # If we’re at a boundary and have no active predictions, fetch new ones
             if self.engine.needs_predictions():
                 response = predict_next_token_kinds("".join(completion_parts))
                 self.engine.set_predictions(response.expected_token_kind_ids)
-                can_end = bool(response.can_end_input)
-                is_type_context = bool(response.type_name_context)
-
+                can_end = response.can_end_input
+                semantic_symbol_context = response.semantic_symbol_context
+                root_start = response.root_start
 
             # If the current pattern is already in an accepting state, we also need "post" prediction
             # (what could come next *if we stop the pattern here*), so we can mask delimiters like ')', ',', '}', etc.
             elif self.engine.needs_post_predictions():
                 response = predict_next_token_kinds("".join(completion_parts))
                 self.engine.set_post_predictions(response.expected_token_kind_ids)
-                can_end = bool(response.can_end_input)
-                is_type_context = bool(response.type_name_context)
+                can_end = response.can_end_input
+                semantic_symbol_context = response.semantic_symbol_context
+                root_start = response.root_start
 
-            if is_type_context:
+            if semantic_symbol_context:
                 self.semantic_cache.apply_type_hints()
 
             allowed = self.engine.allowed_token_ids()
 
-            if can_end or not allowed:
-                for sid in stop_ids:
-                    allowed.add(sid)
+            for sid in stop_ids:
+                allowed.add(sid)
+
+            if response is not None:
+                self._current_biases.update(
+                    self.weight_engine.compute_biases(
+                        allowed_token_ids=allowed,
+                        stop_ids=stop_ids,
+                        can_end_input=can_end,
+                        semantic_symbol_context=semantic_symbol_context,
+                        root_start=root_start,
+                    )
+                )
 
             return list(allowed)
 
@@ -139,6 +170,7 @@ class Gemma3CodeGenerator:
                 do_sample=True,
                 eos_token_id=stop_ids,
                 prefix_allowed_tokens_fn=mask_fn,
+                logits_processor=LogitsProcessorList([self.weight_processor]),
                 repetition_penalty=1.1,
                 renormalize_logits=True,
             )[0]

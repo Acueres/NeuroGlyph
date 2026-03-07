@@ -33,7 +33,8 @@ class PredictResponse:
     expected_token_kind_ids: list[int]
     can_terminate_statement: bool
     can_end_input: bool
-    type_name_context: bool
+    semantic_symbol_context: bool
+    root_start: bool
 
 
 @dataclass(frozen=True)

@@ -27,7 +27,8 @@ message PredictReply {
   repeated int32 expected_token_kind_ids = 1;
   bool can_terminate_statement = 2;
   bool can_end_input = 3;
-  bool type_name_context = 4;
+  bool semantic_symbol_context = 4;
+  bool root_start = 5;
 }
 
 message SemanticHintsReply {

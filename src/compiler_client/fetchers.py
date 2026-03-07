@@ -60,7 +60,8 @@ def fetch_expected(
         expected_token_kind_ids=reply.expected_token_kind_ids,
         can_terminate_statement=reply.can_terminate_statement,
         can_end_input=reply.can_end_input,
-        type_name_context=reply.type_name_context,
+        semantic_symbol_context=reply.semantic_symbol_context,
+        root_start=reply.root_start
     )
 
 

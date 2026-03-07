@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x63ompiler.proto\x12\x0fglykon.compiler\x1a\x1bgoogle/protobuf/empty.proto\"R\n\x11LanguageSpecReply\x12\x10\n\x08language\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\t\x12\x0c\n\x04hash\x18\x03 \x01(\t\x12\x0c\n\x04json\x18\x04 \x01(\x0c\"\x1e\n\x0ePredictRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\"\x82\x01\n\x0cPredictReply\x12\x1f\n\x17\x65xpected_token_kind_ids\x18\x01 \x03(\x05\x12\x1f\n\x17\x63\x61n_terminate_statement\x18\x02 \x01(\x08\x12\x15\n\rcan_end_input\x18\x03 \x01(\x08\x12\x19\n\x11type_name_context\x18\x04 \x01(\x08\"/\n\x12SemanticHintsReply\x12\x19\n\x11preferred_lexemes\x18\x01 \x03(\t2\x80\x02\n\x0f\x43ompilerService\x12M\n\x0fGetLanguageSpec\x12\x16.google.protobuf.Empty\x1a\".glykon.compiler.LanguageSpecReply\x12M\n\x0bPredictNext\x12\x1f.glykon.compiler.PredictRequest\x1a\x1d.glykon.compiler.PredictReply\x12O\n\x10GetSemanticHints\x12\x16.google.protobuf.Empty\x1a#.glykon.compiler.SemanticHintsReplyB\x19\xaa\x02\x16Glykon.LanguageServiceb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x63ompiler.proto\x12\x0fglykon.compiler\x1a\x1bgoogle/protobuf/empty.proto\"R\n\x11LanguageSpecReply\x12\x10\n\x08language\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\t\x12\x0c\n\x04hash\x18\x03 \x01(\t\x12\x0c\n\x04json\x18\x04 \x01(\x0c\"\x1e\n\x0ePredictRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\"\x9c\x01\n\x0cPredictReply\x12\x1f\n\x17\x65xpected_token_kind_ids\x18\x01 \x03(\x05\x12\x1f\n\x17\x63\x61n_terminate_statement\x18\x02 \x01(\x08\x12\x15\n\rcan_end_input\x18\x03 \x01(\x08\x12\x1f\n\x17semantic_symbol_context\x18\x04 \x01(\x08\x12\x12\n\nroot_start\x18\x05 \x01(\x08\"/\n\x12SemanticHintsReply\x12\x19\n\x11preferred_lexemes\x18\x01 \x03(\t2\x80\x02\n\x0f\x43ompilerService\x12M\n\x0fGetLanguageSpec\x12\x16.google.protobuf.Empty\x1a\".glykon.compiler.LanguageSpecReply\x12M\n\x0bPredictNext\x12\x1f.glykon.compiler.PredictRequest\x1a\x1d.glykon.compiler.PredictReply\x12O\n\x10GetSemanticHints\x12\x16.google.protobuf.Empty\x1a#.glykon.compiler.SemanticHintsReplyB\x19\xaa\x02\x16Glykon.LanguageServiceb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,9 +38,9 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_PREDICTREQUEST']._serialized_start=148
   _globals['_PREDICTREQUEST']._serialized_end=178
   _globals['_PREDICTREPLY']._serialized_start=181
-  _globals['_PREDICTREPLY']._serialized_end=311
-  _globals['_SEMANTICHINTSREPLY']._serialized_start=313
-  _globals['_SEMANTICHINTSREPLY']._serialized_end=360
-  _globals['_COMPILERSERVICE']._serialized_start=363
-  _globals['_COMPILERSERVICE']._serialized_end=619
+  _globals['_PREDICTREPLY']._serialized_end=337
+  _globals['_SEMANTICHINTSREPLY']._serialized_start=339
+  _globals['_SEMANTICHINTSREPLY']._serialized_end=386
+  _globals['_COMPILERSERVICE']._serialized_start=389
+  _globals['_COMPILERSERVICE']._serialized_end=645
 # @@protoc_insertion_point(module_scope)

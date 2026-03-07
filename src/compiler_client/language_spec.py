@@ -185,6 +185,7 @@ class LanguageSpec:
     grammar_prompt: str
     tokens: tuple[TokenInfo, ...]
     fixed_tokens: tuple[FixedToken, ...]
+    root_tokens: tuple[FixedToken, ...]
     lexer_machines: tuple[LexerMachine, ...]
     trivia: Trivia
     ignored_token_kind_ids: tuple[int, ...]
@@ -196,6 +197,7 @@ class LanguageSpec:
 
         tokens_raw = _as_list(_req(dd, "tokens", ctx), f"{ctx}.tokens")
         fixed_raw = _as_list(_req(dd, "fixedTokens", ctx), f"{ctx}.fixedTokens")
+        root_raw = _as_list(_req(dd, "rootTokens", ctx), f"{ctx}.rootTokens")
         machines_raw = _as_list(_req(dd, "lexerMachines", ctx), f"{ctx}.lexerMachines")
 
         return LanguageSpec(
@@ -209,6 +211,10 @@ class LanguageSpec:
             fixed_tokens=tuple(
                 FixedToken.from_dict(_as_dict(x, f"{ctx}.fixedTokens[{i}]"))
                 for i, x in enumerate(fixed_raw)
+            ),
+            root_tokens=tuple(
+                FixedToken.from_dict(_as_dict(x, f"{ctx}.rootTokens[{i}]"))
+                for i, x in enumerate(root_raw)
             ),
             lexer_machines=tuple(
                 LexerMachine.from_dict(_as_dict(x, f"{ctx}.lexerMachines[{i}]"))
