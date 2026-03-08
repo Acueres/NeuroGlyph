@@ -61,7 +61,7 @@ def fetch_expected(
         can_terminate_statement=reply.can_terminate_statement,
         can_end_input=reply.can_end_input,
         semantic_symbol_context=reply.semantic_symbol_context,
-        root_start=reply.root_start
+        root_start=reply.root_start,
     )
 
 
@@ -86,3 +86,27 @@ def fetch_semantic_hints(
         reply = stub.GetSemanticHints(Empty(), timeout=timeout_s)
 
     return SemanticHintsResponse(preferred_lexemes=reply.preferred_lexemes)
+
+
+def fetch_parse_ok(
+    target: str,
+    text: str,
+    root_cert_pem: Optional[str] = None,
+    timeout_s: float = 5.0,
+) -> bool:
+    creds = grpc.ssl_channel_credentials(
+        root_certificates=_read_bytes(root_cert_pem) if root_cert_pem else None
+    )
+
+    options = [
+        ("grpc.keepalive_time_ms", 30_000),
+        ("grpc.keepalive_timeout_ms", 10_000),
+        ("grpc.http2.max_pings_without_data", 0),
+    ]
+
+    with grpc.secure_channel(target, creds, options=options) as channel:
+        stub = proto.compiler_pb2_grpc.CompilerServiceStub(channel)
+        request = PredictRequest(text=text)
+        reply = stub.ParseOk(request.to_proto(), timeout=timeout_s)
+
+    return reply.ok

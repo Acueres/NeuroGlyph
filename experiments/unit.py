@@ -6,12 +6,20 @@ from experiments.base import (
     bootstrap_repo_root,
     set_torch_seed,
 )
+from typing import Callable
 
 
 def main() -> None:
     bootstrap_repo_root()
 
     from generator.code_generator import Gemma3CodeGenerator, Gemma3Config, get_stop_ids
+    from compiler_client.fetchers import fetch_parse_ok
+
+    def get_parse_check_fn() -> Callable[[str], bool]:
+        def wrapper(text: str):
+            return fetch_parse_ok("localhost:7162", text, root_cert_pem="./cert.pem")
+
+        return wrapper
 
     gen = Gemma3CodeGenerator(
         Gemma3Config(model_id="google/gemma-3-4b-it", max_new_tokens=256)
@@ -114,6 +122,7 @@ def main() -> None:
     runner = ExperimentRunner(
         constrained_fn=generate_constrained,
         unconstrained_fn=generate_unconstrained,
+        parse_check_fn=get_parse_check_fn(),
     )
     results = runner.run(cases)
     runner.print_results(results)

@@ -1,10 +1,32 @@
 import torch
 import os
 import sys
+import re
 
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Optional
+
+_FENCE_RE = re.compile(r"(?s)(```|~~~)(?:[^\n]*)\n(.*?)\1")
+
+
+def extract_code(text: str) -> str:
+    """
+    Extracts code from a markdown-fenced block if present. Otherwise returns the trimmed text.
+    """
+    if not text:
+        return ""
+    matches = _FENCE_RE.findall(text)
+    if not matches:
+        return text.strip()
+
+    best = ""
+    for _, body in matches:
+        candidate = (body or "").strip()
+        if len(candidate) > len(best):
+            best = candidate
+
+    return best if best else text.strip()
 
 
 def bootstrap_repo_root() -> Path:
@@ -36,8 +58,14 @@ class ExperimentCase:
 @dataclass(frozen=True, slots=True)
 class ExperimentResult:
     case: ExperimentCase
-    constrained_output: str
-    unconstrained_output: Optional[str] = None
+
+    constrained_output_raw: str
+    constrained_code: str
+    constrained_parse_ok: Optional[bool]
+
+    unconstrained_output_raw: Optional[str] = None
+    unconstrained_code: Optional[str] = None
+    unconstrained_parse_ok: Optional[bool] = None
 
 
 class ExperimentRunner:
@@ -53,28 +81,54 @@ class ExperimentRunner:
         *,
         constrained_fn: Callable[[ExperimentCase], str],
         unconstrained_fn: Optional[Callable[[ExperimentCase], str]] = None,
+        parse_check_fn: Optional[Callable[[str], bool]] = None,
     ) -> None:
         self._constrained_fn = constrained_fn
         self._unconstrained_fn = unconstrained_fn
+        self._parse_check_fn = parse_check_fn
 
     def run(self, cases: Iterable[ExperimentCase]) -> list[ExperimentResult]:
         results: list[ExperimentResult] = []
+
         for c in cases:
-            constrained = self._constrained_fn(c)
-            unconstrained = (
+            constrained_raw = self._constrained_fn(c)
+            constrained_code = extract_code(constrained_raw)
+            constrained_ok = (
+                self._parse_check_fn(constrained_code) if self._parse_check_fn else None
+            )
+
+            unconstrained_raw = (
                 self._unconstrained_fn(c) if self._unconstrained_fn else None
             )
+            unconstrained_code = (
+                extract_code(unconstrained_raw)
+                if unconstrained_raw is not None
+                else None
+            )
+            unconstrained_ok = (
+                self._parse_check_fn(unconstrained_code)
+                if (self._parse_check_fn and unconstrained_code is not None)
+                else None
+            )
+
             results.append(
                 ExperimentResult(
                     case=c,
-                    constrained_output=constrained,
-                    unconstrained_output=unconstrained,
+                    constrained_output_raw=constrained_raw,
+                    constrained_code=constrained_code,
+                    constrained_parse_ok=constrained_ok,
+                    unconstrained_output_raw=unconstrained_raw,
+                    unconstrained_code=unconstrained_code,
+                    unconstrained_parse_ok=unconstrained_ok,
                 )
             )
+
         return results
 
     @staticmethod
     def print_results(results: Iterable[ExperimentResult]) -> None:
+        results = list(results)
+
         for r in results:
             print("=" * 100)
             print(f"[CASE] {r.case.name} | seed={r.case.seed}")
@@ -83,11 +137,39 @@ class ExperimentRunner:
             print(r.case.task.rstrip())
             print("-" * 100)
 
-            if r.unconstrained_output is not None:
-                print("[UNCONSTRAINED OUTPUT]")
-                print(r.unconstrained_output.rstrip())
+            if r.unconstrained_output_raw is not None:
+                print(f"[UNCONSTRAINED PARSE OK] {r.unconstrained_parse_ok}")
+                print("[UNCONSTRAINED OUTPUT RAW]")
+                print(r.unconstrained_output_raw.rstrip())
+                print("-" * 100)
+                print("[UNCONSTRAINED CODE EXTRACTED]")
+                print(r.unconstrained_code.rstrip() if r.unconstrained_code else "")
                 print("-" * 100)
 
-            print("[CONSTRAINED OUTPUT]")
-            print(r.constrained_output.rstrip())
+            print(f"[CONSTRAINED PARSE OK] {r.constrained_parse_ok}")
+            print("[CONSTRAINED OUTPUT RAW]")
+            print(r.constrained_output_raw.rstrip())
+            print("-" * 100)
+            print("[CONSTRAINED CODE EXTRACTED]")
+            print(r.constrained_code.rstrip())
             print()
+
+        # Summary
+        def rate(ok_list: list[Optional[bool]]) -> str:
+            vals = [x for x in ok_list if x is not None]
+            if not vals:
+                return "n/a"
+            return f"{sum(1 for x in vals if x)}/{len(vals)} = {sum(1 for x in vals if x)/len(vals):.1%}"
+
+        uncon_ok = [
+            r.unconstrained_parse_ok
+            for r in results
+            if r.unconstrained_output_raw is not None
+        ]
+        cons_ok = [r.constrained_parse_ok for r in results]
+
+        print("=" * 100)
+        print("[SUMMARY]")
+        print(f"Unconstrained parse success: {rate(uncon_ok)}")
+        print(f"Constrained   parse success: {rate(cons_ok)}")
+        print("=" * 100)
