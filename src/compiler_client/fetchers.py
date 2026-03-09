@@ -4,7 +4,12 @@ import proto.compiler_pb2_grpc
 from google.protobuf.empty_pb2 import Empty
 from typing import Optional
 from .requests import PredictRequest
-from .responses import LanguageSpecResponse, PredictResponse, SemanticHintsResponse
+from .responses import (
+    LanguageSpecResponse,
+    PredictResponse,
+    SemanticHintsResponse,
+    CheckSyntaxResponse,
+)
 
 
 def _read_bytes(path: str) -> bytes:
@@ -93,7 +98,7 @@ def fetch_parse_ok(
     text: str,
     root_cert_pem: Optional[str] = None,
     timeout_s: float = 5.0,
-) -> bool:
+) -> CheckSyntaxResponse:
     creds = grpc.ssl_channel_credentials(
         root_certificates=_read_bytes(root_cert_pem) if root_cert_pem else None
     )
@@ -107,6 +112,12 @@ def fetch_parse_ok(
     with grpc.secure_channel(target, creds, options=options) as channel:
         stub = proto.compiler_pb2_grpc.CompilerServiceStub(channel)
         request = PredictRequest(text=text)
-        reply = stub.ParseOk(request.to_proto(), timeout=timeout_s)
+        reply = stub.CheckSyntax(request.to_proto(), timeout=timeout_s)
 
-    return reply.ok
+    response = CheckSyntaxResponse(
+        ok=reply.ok,
+        syntax_errors_number=reply.syntax_errors_number,
+        parse_errors_number=reply.parse_errors_number,
+    )
+
+    return response

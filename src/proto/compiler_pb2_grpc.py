@@ -50,10 +50,10 @@ class CompilerServiceStub(object):
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
                 response_deserializer=compiler__pb2.SemanticHintsReply.FromString,
                 _registered_method=True)
-        self.ParseOk = channel.unary_unary(
-                '/glykon.compiler.CompilerService/ParseOk',
+        self.CheckSyntax = channel.unary_unary(
+                '/glykon.compiler.CompilerService/CheckSyntax',
                 request_serializer=compiler__pb2.PredictRequest.SerializeToString,
-                response_deserializer=compiler__pb2.ParseOkReply.FromString,
+                response_deserializer=compiler__pb2.CheckSyntaxReply.FromString,
                 _registered_method=True)
 
 
@@ -78,7 +78,7 @@ class CompilerServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ParseOk(self, request, context):
+    def CheckSyntax(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -102,10 +102,10 @@ def add_CompilerServiceServicer_to_server(servicer, server):
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                     response_serializer=compiler__pb2.SemanticHintsReply.SerializeToString,
             ),
-            'ParseOk': grpc.unary_unary_rpc_method_handler(
-                    servicer.ParseOk,
+            'CheckSyntax': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckSyntax,
                     request_deserializer=compiler__pb2.PredictRequest.FromString,
-                    response_serializer=compiler__pb2.ParseOkReply.SerializeToString,
+                    response_serializer=compiler__pb2.CheckSyntaxReply.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -200,7 +200,7 @@ class CompilerService(object):
             _registered_method=True)
 
     @staticmethod
-    def ParseOk(request,
+    def CheckSyntax(request,
             target,
             options=(),
             channel_credentials=None,
@@ -213,9 +213,9 @@ class CompilerService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/glykon.compiler.CompilerService/ParseOk',
+            '/glykon.compiler.CompilerService/CheckSyntax',
             compiler__pb2.PredictRequest.SerializeToString,
-            compiler__pb2.ParseOkReply.FromString,
+            compiler__pb2.CheckSyntaxReply.FromString,
             options,
             channel_credentials,
             insecure,

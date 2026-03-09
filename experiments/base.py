@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Optional
+from src.compiler_client.responses import CheckSyntaxResponse
 
 _FENCE_RE = re.compile(r"(?s)(```|~~~)(?:[^\n]*)\n(.*?)\1")
 
@@ -62,10 +63,14 @@ class ExperimentResult:
     constrained_output_raw: str
     constrained_code: str
     constrained_parse_ok: Optional[bool]
+    constrained_syntax_errors: Optional[int]
+    constrained_parse_errors: Optional[int]
 
     unconstrained_output_raw: Optional[str] = None
     unconstrained_code: Optional[str] = None
     unconstrained_parse_ok: Optional[bool] = None
+    unconstrained_syntax_errors: Optional[int] = None
+    unconstrained_parse_errors: Optional[int] = None
 
 
 class ExperimentRunner:
@@ -81,7 +86,7 @@ class ExperimentRunner:
         *,
         constrained_fn: Callable[[ExperimentCase], str],
         unconstrained_fn: Optional[Callable[[ExperimentCase], str]] = None,
-        parse_check_fn: Optional[Callable[[str], bool]] = None,
+        parse_check_fn: Optional[Callable[[str], CheckSyntaxResponse]] = None,
     ) -> None:
         self._constrained_fn = constrained_fn
         self._unconstrained_fn = unconstrained_fn
@@ -93,8 +98,21 @@ class ExperimentRunner:
         for c in cases:
             constrained_raw = self._constrained_fn(c)
             constrained_code = extract_code(constrained_raw)
-            constrained_ok = (
+            constrained_syntax_check = (
                 self._parse_check_fn(constrained_code) if self._parse_check_fn else None
+            )
+            constrained_ok = (
+                constrained_syntax_check.ok if constrained_syntax_check else None
+            )
+            constrained_syntax_errors = (
+                constrained_syntax_check.syntax_errors_number
+                if constrained_syntax_check
+                else None
+            )
+            constrained_parse_errors = (
+                constrained_syntax_check.parse_errors_number
+                if constrained_syntax_check
+                else None
             )
 
             unconstrained_raw = (
@@ -105,9 +123,22 @@ class ExperimentRunner:
                 if unconstrained_raw is not None
                 else None
             )
-            unconstrained_ok = (
+            unconstrained_syntax_check = (
                 self._parse_check_fn(unconstrained_code)
-                if (self._parse_check_fn and unconstrained_code is not None)
+                if unconstrained_code and self._parse_check_fn
+                else None
+            )
+            unconstrained_ok = (
+                unconstrained_syntax_check.ok if unconstrained_syntax_check else None
+            )
+            unconstrained_syntax_errors = (
+                unconstrained_syntax_check.syntax_errors_number
+                if unconstrained_syntax_check
+                else None
+            )
+            unconstrained_parse_errors = (
+                unconstrained_syntax_check.parse_errors_number
+                if unconstrained_syntax_check
                 else None
             )
 
@@ -117,9 +148,13 @@ class ExperimentRunner:
                     constrained_output_raw=constrained_raw,
                     constrained_code=constrained_code,
                     constrained_parse_ok=constrained_ok,
+                    constrained_syntax_errors=constrained_syntax_errors,
+                    constrained_parse_errors=constrained_parse_errors,
                     unconstrained_output_raw=unconstrained_raw,
                     unconstrained_code=unconstrained_code,
                     unconstrained_parse_ok=unconstrained_ok,
+                    unconstrained_syntax_errors=unconstrained_syntax_errors,
+                    unconstrained_parse_errors=unconstrained_parse_errors,
                 )
             )
 
@@ -128,6 +163,10 @@ class ExperimentRunner:
     @staticmethod
     def print_results(results: Iterable[ExperimentResult]) -> None:
         results = list(results)
+        unconstrained_syntax_errors = 0
+        unconstrained_parse_errors = 0
+        constrained_syntax_errors = 0
+        constrained_parse_errors = 0
 
         for r in results:
             print("=" * 100)
@@ -139,6 +178,16 @@ class ExperimentRunner:
 
             if r.unconstrained_output_raw is not None:
                 print(f"[UNCONSTRAINED PARSE OK] {r.unconstrained_parse_ok}")
+                if r.unconstrained_syntax_errors and r.unconstrained_syntax_errors > 0:
+                    print(
+                        f"[UNCONSTRAINED SYNTAX ERRORS] {r.unconstrained_syntax_errors}"
+                    )
+                    unconstrained_syntax_errors += r.unconstrained_syntax_errors
+                if r.unconstrained_parse_errors and r.unconstrained_parse_errors > 0:
+                    print(
+                        f"[UNCONSTRAINED PARSE ERRORS] {r.unconstrained_parse_errors}"
+                    )
+                    unconstrained_parse_errors += r.unconstrained_parse_errors
                 print("[UNCONSTRAINED OUTPUT RAW]")
                 print(r.unconstrained_output_raw.rstrip())
                 print("-" * 100)
@@ -147,8 +196,12 @@ class ExperimentRunner:
                 print("-" * 100)
 
             print(f"[CONSTRAINED PARSE OK] {r.constrained_parse_ok}")
-            print("[CONSTRAINED OUTPUT RAW]")
-            print(r.constrained_output_raw.rstrip())
+            if r.constrained_syntax_errors and r.constrained_syntax_errors > 0:
+                print(f"[UNCONSTRAINED SYNTAX ERRORS] {r.constrained_syntax_errors}")
+                constrained_syntax_errors += r.constrained_syntax_errors
+            if r.constrained_parse_errors and r.constrained_parse_errors > 0:
+                print(f"[UNCONSTRAINED PARSE ERRORS] {r.constrained_parse_errors}")
+                constrained_parse_errors += r.constrained_parse_errors
             print("-" * 100)
             print("[CONSTRAINED CODE EXTRACTED]")
             print(r.constrained_code.rstrip())
@@ -171,5 +224,17 @@ class ExperimentRunner:
         print("=" * 100)
         print("[SUMMARY]")
         print(f"Unconstrained parse success: {rate(uncon_ok)}")
+        print(
+            f"Unconstrained average syntax errors: {unconstrained_syntax_errors / len(uncon_ok)}"
+        )
+        print(
+            f"Unconstrained average parse errors: {unconstrained_parse_errors / len(uncon_ok)}"
+        )
         print(f"Constrained   parse success: {rate(cons_ok)}")
+        print(
+            f"Constrained   average syntax errors: {constrained_syntax_errors / len(cons_ok)}"
+        )
+        print(
+            f"Constrained   average parse errors: {constrained_parse_errors / len(cons_ok)}"
+        )
         print("=" * 100)

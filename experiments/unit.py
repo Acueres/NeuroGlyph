@@ -14,8 +14,9 @@ def main() -> None:
 
     from generator.code_generator import Gemma3CodeGenerator, Gemma3Config, get_stop_ids
     from compiler_client.fetchers import fetch_parse_ok
+    from compiler_client.responses import CheckSyntaxResponse
 
-    def get_parse_check_fn() -> Callable[[str], bool]:
+    def get_parse_check_fn() -> Callable[[str], CheckSyntaxResponse]:
         def wrapper(text: str):
             return fetch_parse_ok("localhost:7162", text, root_cert_pem="./cert.pem")
 

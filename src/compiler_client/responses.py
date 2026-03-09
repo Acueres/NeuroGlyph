@@ -40,3 +40,10 @@ class PredictResponse:
 @dataclass(frozen=True)
 class SemanticHintsResponse:
     preferred_lexemes: list[str]
+
+
+@dataclass(frozen=True)
+class CheckSyntaxResponse:
+    ok: bool
+    syntax_errors_number: int
+    parse_errors_number: int

@@ -10,7 +10,7 @@ service CompilerService {
   rpc GetLanguageSpec(google.protobuf.Empty) returns (LanguageSpecReply);
   rpc PredictNext(PredictRequest) returns (PredictReply);
   rpc GetSemanticHints(google.protobuf.Empty) returns (SemanticHintsReply);
-  rpc ParseOk(PredictRequest) returns (ParseOkReply);
+  rpc CheckSyntax(PredictRequest) returns (CheckSyntaxReply);
 }
 
 message LanguageSpecReply {
@@ -36,6 +36,8 @@ message SemanticHintsReply {
   repeated string preferred_lexemes = 1;
 }
 
-message ParseOkReply {
+message CheckSyntaxReply {
   bool ok = 1;
+  int32 syntax_errors_number = 2;
+  int32 parse_errors_number = 3;
 }
