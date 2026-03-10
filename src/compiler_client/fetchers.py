@@ -8,7 +8,7 @@ from .responses import (
     LanguageSpecResponse,
     PredictResponse,
     SemanticHintsResponse,
-    CheckSyntaxResponse,
+    AnalyzeInputResponse,
 )
 
 
@@ -17,7 +17,7 @@ def _read_bytes(path: str) -> bytes:
         return f.read()
 
 
-def fetch_language_spec(
+def get_language_spec(
     target: str,
     root_cert_pem: Optional[str] = None,
     timeout_s: float = 5.0,
@@ -40,7 +40,7 @@ def fetch_language_spec(
     return language_spec_response
 
 
-def fetch_expected(
+def get_expected(
     target: str,
     text: str,
     root_cert_pem: Optional[str] = None,
@@ -70,7 +70,7 @@ def fetch_expected(
     )
 
 
-def fetch_semantic_hints(
+def get_semantic_hints(
     target: str,
     root_cert_pem: Optional[str] = None,
     timeout_s: float = 5.0,
@@ -93,12 +93,12 @@ def fetch_semantic_hints(
     return SemanticHintsResponse(preferred_lexemes=reply.preferred_lexemes)
 
 
-def fetch_parse_ok(
+def analyze_input(
     target: str,
     text: str,
     root_cert_pem: Optional[str] = None,
     timeout_s: float = 5.0,
-) -> CheckSyntaxResponse:
+) -> AnalyzeInputResponse:
     creds = grpc.ssl_channel_credentials(
         root_certificates=_read_bytes(root_cert_pem) if root_cert_pem else None
     )
@@ -112,12 +112,13 @@ def fetch_parse_ok(
     with grpc.secure_channel(target, creds, options=options) as channel:
         stub = proto.compiler_pb2_grpc.CompilerServiceStub(channel)
         request = PredictRequest(text=text)
-        reply = stub.CheckSyntax(request.to_proto(), timeout=timeout_s)
+        reply = stub.AnalyzeInput(request.to_proto(), timeout=timeout_s)
 
-    response = CheckSyntaxResponse(
+    response = AnalyzeInputResponse(
         ok=reply.ok,
         syntax_errors_number=reply.syntax_errors_number,
         parse_errors_number=reply.parse_errors_number,
+        semantic_errors_number=reply.semantic_errors_number,
     )
 
     return response

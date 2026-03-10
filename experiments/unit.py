@@ -13,12 +13,12 @@ def main() -> None:
     bootstrap_repo_root()
 
     from generator.code_generator import Gemma3CodeGenerator, Gemma3Config, get_stop_ids
-    from compiler_client.fetchers import fetch_parse_ok
-    from compiler_client.responses import CheckSyntaxResponse
+    from compiler_client.fetchers import analyze_input
+    from compiler_client.responses import AnalyzeInputResponse
 
-    def get_parse_check_fn() -> Callable[[str], CheckSyntaxResponse]:
+    def analyze_input_fn() -> Callable[[str], AnalyzeInputResponse]:
         def wrapper(text: str):
-            return fetch_parse_ok("localhost:7162", text, root_cert_pem="./cert.pem")
+            return analyze_input("localhost:7162", text, root_cert_pem="./cert.pem")
 
         return wrapper
 
@@ -100,12 +100,12 @@ def main() -> None:
         ),
         ExperimentCase(
             name="for_range",
-            task="Generate a function that iterates `i` from 0 to 10 inclusive and calls `println(i)` each iteration.",
+            task="Generate a function that iterates `i` from 0 to 10 inclusive and calls `println(i as str)` each iteration.",
             seed=6,
         ),
         ExperimentCase(
             name="initializer_new",
-            task="Generate a snippet that creates a 'Point' object with parameters x = 1 and y = 2.",
+            task="Generate a snippet that creates a 'Point' object with positional parameters 1 and 2.",
             seed=7,
         ),
         ExperimentCase(
@@ -115,7 +115,7 @@ def main() -> None:
         ),
         ExperimentCase(
             name="two_funcs_main",
-            task="Generate two functions: `add(int,int)->int` and `main()` that calls add and prints the result using 'println' function.",
+            task="Generate two functions: `add(int,int)->int` and `main()` that calls add and prints the result using 'println' function. Use 'println(val as str)' to cast the value into a string",
             seed=9,
         ),
     ]
@@ -123,7 +123,7 @@ def main() -> None:
     runner = ExperimentRunner(
         constrained_fn=generate_constrained,
         unconstrained_fn=generate_unconstrained,
-        parse_check_fn=get_parse_check_fn(),
+        analyze_input_fn=analyze_input_fn(),
     )
     results = runner.run(cases)
     runner.print_results(results)

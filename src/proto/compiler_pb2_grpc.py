@@ -50,10 +50,10 @@ class CompilerServiceStub(object):
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
                 response_deserializer=compiler__pb2.SemanticHintsReply.FromString,
                 _registered_method=True)
-        self.CheckSyntax = channel.unary_unary(
-                '/glykon.compiler.CompilerService/CheckSyntax',
+        self.AnalyzeInput = channel.unary_unary(
+                '/glykon.compiler.CompilerService/AnalyzeInput',
                 request_serializer=compiler__pb2.PredictRequest.SerializeToString,
-                response_deserializer=compiler__pb2.CheckSyntaxReply.FromString,
+                response_deserializer=compiler__pb2.AnalyzeInputReply.FromString,
                 _registered_method=True)
 
 
@@ -78,7 +78,7 @@ class CompilerServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def CheckSyntax(self, request, context):
+    def AnalyzeInput(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -102,10 +102,10 @@ def add_CompilerServiceServicer_to_server(servicer, server):
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                     response_serializer=compiler__pb2.SemanticHintsReply.SerializeToString,
             ),
-            'CheckSyntax': grpc.unary_unary_rpc_method_handler(
-                    servicer.CheckSyntax,
+            'AnalyzeInput': grpc.unary_unary_rpc_method_handler(
+                    servicer.AnalyzeInput,
                     request_deserializer=compiler__pb2.PredictRequest.FromString,
-                    response_serializer=compiler__pb2.CheckSyntaxReply.SerializeToString,
+                    response_serializer=compiler__pb2.AnalyzeInputReply.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -200,7 +200,7 @@ class CompilerService(object):
             _registered_method=True)
 
     @staticmethod
-    def CheckSyntax(request,
+    def AnalyzeInput(request,
             target,
             options=(),
             channel_credentials=None,
@@ -213,9 +213,9 @@ class CompilerService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/glykon.compiler.CompilerService/CheckSyntax',
+            '/glykon.compiler.CompilerService/AnalyzeInput',
             compiler__pb2.PredictRequest.SerializeToString,
-            compiler__pb2.CheckSyntaxReply.FromString,
+            compiler__pb2.AnalyzeInputReply.FromString,
             options,
             channel_credentials,
             insecure,

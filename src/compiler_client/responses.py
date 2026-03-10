@@ -43,7 +43,8 @@ class SemanticHintsResponse:
 
 
 @dataclass(frozen=True)
-class CheckSyntaxResponse:
+class AnalyzeInputResponse:
     ok: bool
     syntax_errors_number: int
     parse_errors_number: int
+    semantic_errors_number: int

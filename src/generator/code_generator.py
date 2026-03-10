@@ -8,9 +8,9 @@ from transformers import (
 )
 from compiler_client.responses import PredictResponse
 from compiler_client.fetchers import (
-    fetch_language_spec,
-    fetch_expected,
-    fetch_semantic_hints,
+    get_language_spec,
+    get_expected,
+    get_semantic_hints,
 )
 from syntax.mask_engine import MaskEngine
 from semantics.semantic_hints import SemanticHintsCache
@@ -42,7 +42,7 @@ class Gemma3CodeGenerator:
         self.processor = AutoProcessor.from_pretrained(self.config.model_id)
         self.tokenizer = self.processor.tokenizer
 
-        lang_spec_response = fetch_language_spec(
+        lang_spec_response = get_language_spec(
             "localhost:7162", root_cert_pem="./cert.pem"
         )
         self.engine = MaskEngine(lang_spec_response.spec, self.tokenizer)
@@ -50,7 +50,7 @@ class Gemma3CodeGenerator:
             lang_spec_response.spec, language_name=lang_spec_response.language
         )
 
-        semantic_hints_reply = fetch_semantic_hints(
+        semantic_hints_reply = get_semantic_hints(
             "localhost:7162", root_cert_pem="./cert.pem"
         )
         self.semantic_cache = SemanticHintsCache(
@@ -180,7 +180,7 @@ class Gemma3CodeGenerator:
 
 
 def predict_next_token_kinds(prefix_code: str) -> PredictResponse:
-    response = fetch_expected("localhost:7162", prefix_code, root_cert_pem="./cert.pem")
+    response = get_expected("localhost:7162", prefix_code, root_cert_pem="./cert.pem")
     return response
 
 
