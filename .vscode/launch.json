@@ -12,10 +12,17 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Run experiments",
+            "name": "Run experiments: unit",
             "type": "debugpy",
             "request": "launch",
             "program": "experiments/unit.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Run experiments: tasks",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "experiments/tasks.py",
             "console": "integratedTerminal"
         }
     ]

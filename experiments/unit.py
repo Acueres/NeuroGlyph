@@ -126,7 +126,7 @@ def main() -> None:
         analyze_input_fn=analyze_input_fn(),
     )
     results = runner.run(cases)
-    runner.print_results(results)
+    ExperimentRunner.print_results(results)
 
 
 if __name__ == "__main__":

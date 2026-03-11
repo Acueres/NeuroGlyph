@@ -48,3 +48,9 @@ class AnalyzeInputResponse:
     syntax_errors_number: int
     parse_errors_number: int
     semantic_errors_number: int
+
+
+@dataclass(frozen=True)
+class EvaluateInputResponse:
+    ok: bool
+    output: str

@@ -9,6 +9,7 @@ from .responses import (
     PredictResponse,
     SemanticHintsResponse,
     AnalyzeInputResponse,
+    EvaluateInputResponse,
 )
 
 
@@ -120,5 +121,31 @@ def analyze_input(
         parse_errors_number=reply.parse_errors_number,
         semantic_errors_number=reply.semantic_errors_number,
     )
+
+    return response
+
+
+def evaluate_input(
+    target: str,
+    text: str,
+    root_cert_pem: Optional[str] = None,
+    timeout_s: float = 5.0,
+) -> EvaluateInputResponse:
+    creds = grpc.ssl_channel_credentials(
+        root_certificates=_read_bytes(root_cert_pem) if root_cert_pem else None
+    )
+
+    options = [
+        ("grpc.keepalive_time_ms", 30_000),
+        ("grpc.keepalive_timeout_ms", 10_000),
+        ("grpc.http2.max_pings_without_data", 0),
+    ]
+
+    with grpc.secure_channel(target, creds, options=options) as channel:
+        stub = proto.compiler_pb2_grpc.CompilerServiceStub(channel)
+        request = PredictRequest(text=text)
+        reply = stub.EvaluateInput(request.to_proto(), timeout=timeout_s)
+
+    response = EvaluateInputResponse(ok=reply.ok, output=reply.output)
 
     return response

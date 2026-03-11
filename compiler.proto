@@ -11,6 +11,7 @@ service CompilerService {
   rpc PredictNext(PredictRequest) returns (PredictReply);
   rpc GetSemanticHints(google.protobuf.Empty) returns (SemanticHintsReply);
   rpc AnalyzeInput(PredictRequest) returns (AnalyzeInputReply);
+  rpc EvaluateInput(PredictRequest) returns (EvaluateInputReply);
 }
 
 message LanguageSpecReply {
@@ -41,4 +42,9 @@ message AnalyzeInputReply {
   int32 syntax_errors_number = 2;
   int32 parse_errors_number = 3;
   int32 semantic_errors_number = 4;
+}
+
+message EvaluateInputReply {
+  bool ok = 1;
+  string output = 2;
 }
