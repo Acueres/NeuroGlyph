@@ -24,6 +24,13 @@
             "request": "launch",
             "program": "experiments/tasks.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Run experiments: adversarial",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "experiments/adversarial.py",
+            "console": "integratedTerminal"
         }
     ]
 }
