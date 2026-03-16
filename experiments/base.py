@@ -2,8 +2,9 @@ import torch
 import os
 import sys
 import re
+import json
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 from src.compiler_client.responses import AnalyzeInputResponse, EvaluateInputResponse
@@ -358,3 +359,129 @@ class ExperimentRunner:
         if any(v is not None for v in cons_eval):
             print(f"Constrained   eval success:    {_rate(cons_eval)}")
         print("=" * 100)
+
+
+    @staticmethod
+    def _rate_fraction(values: list[Optional[bool]]) -> dict[str, float | int | None]:
+        vals = [v for v in values if v is not None]
+        if not vals:
+            return {"ok": None, "total": 0, "rate": None}
+        ok = sum(1 for v in vals if v)
+        total = len(vals)
+        return {"ok": ok, "total": total, "rate": ok / total}
+
+    @staticmethod
+    def _avg_value(values: list[Optional[int]]) -> float | None:
+        vals = [v for v in values if v is not None]
+        if not vals:
+            return None
+        return sum(vals) / len(vals)
+
+    @classmethod
+    def build_summary(cls, results: Iterable[ExperimentResult]) -> dict:
+        results = list(results)
+
+        uncon_ok = [
+            r.unconstrained_parse_ok
+            for r in results
+            if r.unconstrained_output_raw is not None
+        ]
+        cons_ok = [r.constrained_parse_ok for r in results]
+
+        uncon_syntax = [
+            r.unconstrained_syntax_errors
+            for r in results
+            if r.unconstrained_output_raw is not None
+        ]
+        uncon_parse = [
+            r.unconstrained_parse_errors
+            for r in results
+            if r.unconstrained_output_raw is not None
+        ]
+        uncon_sem = [
+            r.unconstrained_semantic_errors
+            for r in results
+            if r.unconstrained_output_raw is not None
+        ]
+
+        cons_syntax = [r.constrained_syntax_errors for r in results]
+        cons_parse = [r.constrained_parse_errors for r in results]
+        cons_sem = [r.constrained_semantic_errors for r in results]
+
+        uncon_eval = [
+            r.unconstrained_eval_ok
+            for r in results
+            if r.unconstrained_output_raw is not None
+        ]
+        cons_eval = [r.constrained_eval_ok for r in results]
+
+        return {
+            "cases_total": len(results),
+            "unconstrained": {
+                "parse_success": cls._rate_fraction(uncon_ok),
+                "avg_syntax_errors": cls._avg_value(uncon_syntax),
+                "avg_parse_errors": cls._avg_value(uncon_parse),
+                "avg_semantic_errors": cls._avg_value(uncon_sem),
+                "eval_success": cls._rate_fraction(uncon_eval),
+            },
+            "constrained": {
+                "parse_success": cls._rate_fraction(cons_ok),
+                "avg_syntax_errors": cls._avg_value(cons_syntax),
+                "avg_parse_errors": cls._avg_value(cons_parse),
+                "avg_semantic_errors": cls._avg_value(cons_sem),
+                "eval_success": cls._rate_fraction(cons_eval),
+            },
+        }
+
+    @staticmethod
+    def save_results(
+        results: Iterable[ExperimentResult],
+        *,
+        suite_name: str,
+        model_family: str,
+        model_key: str,
+        run_name: str,
+        metadata: Optional[dict] = None,
+        out_root: str | Path = "experiments/out",
+    ) -> Path:
+        """
+        Saves:
+          - cases__<run_name>.jsonl
+          - summary__<run_name>.json
+
+        Example path:
+          experiments/out/unit/gemma3/gemma3-12b-it-4bit/
+        """
+        results = list(results)
+
+        out_dir = Path(out_root) / suite_name / model_family / model_key
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        cases_path = out_dir / f"cases__{run_name}.jsonl"
+        summary_path = out_dir / f"summary__{run_name}.json"
+
+        # Save per-case results as JSONL
+        with cases_path.open("w", encoding="utf-8") as f:
+            for r in results:
+                row = asdict(r)
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+        # Save aggregated summary as JSON
+        summary = ExperimentRunner.build_summary(results)
+        payload = {
+            "suite_name": suite_name,
+            "model_family": model_family,
+            "model_key": model_key,
+            "run_name": run_name,
+            "metadata": metadata or {},
+            "summary": summary,
+            "files": {
+                "cases": str(cases_path),
+                "summary": str(summary_path),
+            },
+        }
+
+        with summary_path.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+
+        return out_dir

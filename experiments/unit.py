@@ -138,7 +138,21 @@ def main() -> None:
             analyze_input_fn=analyze_input_fn(),
         )
         results = runner.run(cases)
-        ExperimentRunner.print_results(results)
+
+        ExperimentRunner.save_results(
+            results,
+            suite_name="unit",
+            model_family=spec.family,
+            model_key=spec.key,
+            run_name="sampled__rep-1.1__seeds-10",
+            metadata={
+                "model_id": spec.model_id,
+                "do_sample": True,
+                "repetition_penalty": 1.1,
+                "renormalize_logits": True,
+                "max_new_tokens": spec.max_new_tokens,
+            },
+        )
     except torch.cuda.OutOfMemoryError:
         print(f"[SKIP] {spec.display_name}: CUDA OOM while loading")
         release_cuda_memory()
