@@ -82,69 +82,74 @@ def main() -> None:
             ExperimentCase(
                 name="task_add_main_int",
                 task=(
-                    "Generate two functions: "
-                    "`add(x: int, y: int) -> int` returning the sum, and "
-                    "`main()` that calls add with 1 and 2 and prints the result using "
-                    "`println(val as str)`."
+                    "Write a function named `add` that adds two integers. "
+                    "Also write `main` that prints the result of calling it with 1 and 2."
                 ),
                 seed=1,
+                expected_output="3",
             ),
             ExperimentCase(
                 name="task_add_main_real",
                 task=(
-                    "Generate two functions: "
-                    "`add(x: real, y: real) -> real` returning the sum, and "
-                    "`main()` that calls add with 1.0 and 2.0 and prints the result using "
-                    "`println(val as str)`."
+                    "Write a function named `add` that adds two real numbers. "
+                    "Also write `main` that prints the result of calling it with 1.0 and 2.0."
                 ),
                 seed=2,
+                expected_output="3",
             ),
             ExperimentCase(
                 name="task_sum_to_ten_while",
                 task=(
-                    "Generate a function `sum_to_ten() -> int` that uses a while-loop to sum "
-                    "integers from 1 to 10 and returns the sum."
+                    "Write a function named `sum_to_ten` that sums the integers from 1 to 10 using a while loop. "
+                    "Also write `main` that prints its result."
                 ),
                 seed=3,
+                expected_output="55",
             ),
             ExperimentCase(
                 name="task_print_range_for",
                 task=(
-                    "Generate a function `print_numbers()` that iterates from 0 to 10 inclusive "
-                    "and calls `println(i as str)` for each value."
+                    "Write a function named `print_numbers` that prints the integers from 0 to 10 inclusive, "
+                    "one per line. Also write `main` that calls it."
                 ),
                 seed=4,
+                expected_output="0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10",
             ),
             ExperimentCase(
                 name="task_max2_if_else",
                 task=(
-                    "Generate a function `max2(a: int, b: int) -> int` using if/else and return."
+                    "Write a function named `max2` that returns the larger of two integers using if/else. "
+                    "Also write `main` that prints the result of calling it with 2 and 5."
                 ),
                 seed=5,
+                expected_output="5",
             ),
             ExperimentCase(
                 name="task_point_init",
                 task=(
-                    "Generate a snippet that creates a `Point` object with values 1 and 2 and "
-                    "stores it in variable `point`."
+                    "Define a struct named `Point` with integer fields `a` and `b`. "
+                    "Also write `main` that creates a point with values 3 and 2 and prints the sum of its fields."
                 ),
                 seed=6,
+                expected_output="5",
             ),
             ExperimentCase(
                 name="task_cast_print",
                 task=(
-                    "Generate a snippet that casts `x` to type `int` using `as`, stores it in "
-                    "`y`, and prints `y as str`."
+                    "Write `main` that creates a real value 5.0, converts it to an integer, stores it in `y`, "
+                    "and prints `y`."
                 ),
                 seed=7,
+                expected_output="5",
             ),
             ExperimentCase(
                 name="task_two_add_calls",
                 task=(
-                    "Generate a `main()` function that calls `add(1, 2)` and `add(3, 4)` and "
-                    "prints both results using `println(val as str)`."
+                    "Write a function named `add` that adds two integers. "
+                    "Also write `main` that prints the results of calling it with 1 and 2, and with 3 and 4."
                 ),
                 seed=8,
+                expected_output="3\n7",
             ),
         ]
 
@@ -156,7 +161,7 @@ def main() -> None:
         )
 
         results = runner.run(cases)
-
+        ExperimentRunner.print_results(results)
         ExperimentRunner.save_results(
             results,
             suite_name="tasks",

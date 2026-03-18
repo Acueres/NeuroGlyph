@@ -16,10 +16,7 @@ def main():
             Gemma3Config(model_id=spec.model_id, max_new_tokens=spec.max_new_tokens)
         )
         code = gen.generate(
-            """Task: Generate a function 'add'.
-            The function 'add' adds two ints that come as parameters, and returns an int.
-            Use the 'println' function to print the result in the main function.
-            Start functions with keyword def, not func."""
+            """Task: Generate a function `max2(a: int, b: int) -> int` using if/else and return. Call `max2` in `main` function with arguments a: 2 and b: 5, and print the result with builtin `println(val as str)`."""
         )
         print("Model reply:\n")
         print(code)

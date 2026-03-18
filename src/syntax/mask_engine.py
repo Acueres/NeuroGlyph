@@ -30,9 +30,7 @@ class TriviaClassifier:
         self, whitespace_chars: Iterable[str], newline_char: str, line_comment_char: str
     ):
         # Newline is trivia too.
-        self._trivia_chars = frozenset(
-            set(whitespace_chars) | {newline_char, line_comment_char}
-        )
+        self._trivia_chars = frozenset(set(whitespace_chars) | {newline_char})
         self._newline_char = newline_char
         self._line_comment_char = line_comment_char
 
@@ -304,6 +302,10 @@ class MaskEngine:
             )
         self._fixed_tables = fixed_tables
 
+        self._virtual_terminator_id = [
+            ft.id for ft in spec.fixed_tokens if ft.literal == spec.trivia.newline_char
+        ][0]
+
         # Lexer machines phase
         lexer_tables: dict[int, LexerTable] = self._build_lexer_tables(
             spec.lexer_machines, core_map, token_metas
@@ -408,6 +410,16 @@ class MaskEngine:
         # Trivia-only: allowed only at boundary
         if meta.is_trivia_only:
             if not self._committed:
+                if token_id in self._newline_ids and any(
+                    c.token_kind_id() == self._virtual_terminator_id
+                    for c in self._active
+                ):
+                    self._active = []
+                    self._committed = False
+                    self._finishing_candidates = []
+                    self._committed_pattern_core_len = 0
+                    self._committed_pattern_kind_id = None
+                    return
                 return
 
             if self._in_line_comment and meta.token_id in self._newline_ids:

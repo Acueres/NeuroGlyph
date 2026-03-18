@@ -55,20 +55,21 @@ class ExperimentCase:
     name: str
     task: str
     seed: int = 1
+    expected_output: Optional[str] = None
 
 
 @dataclass(frozen=True, slots=True)
 class ExperimentResult:
     case: ExperimentCase
 
-    constrained_output_raw: str
-    constrained_code: str
+    constrained_output: str
     constrained_parse_ok: Optional[bool]
     constrained_syntax_errors: Optional[int]
     constrained_parse_errors: Optional[int]
     constrained_semantic_errors: Optional[int]
     constrained_eval_ok: Optional[bool] = None
     constrained_eval_output: Optional[str] = None
+    constrained_output_correct: Optional[bool] = None
 
     unconstrained_output_raw: Optional[str] = None
     unconstrained_code: Optional[str] = None
@@ -78,6 +79,7 @@ class ExperimentResult:
     unconstrained_semantic_errors: Optional[int] = None
     unconstrained_eval_ok: Optional[bool] = None
     unconstrained_eval_output: Optional[str] = None
+    unconstrained_output_correct: Optional[bool] = None
 
 
 class ExperimentRunner:
@@ -105,10 +107,9 @@ class ExperimentRunner:
         results: list[ExperimentResult] = []
 
         for c in cases:
-            constrained_raw = self._constrained_fn(c)
-            constrained_code = extract_code(constrained_raw)
+            constrained_output = self._constrained_fn(c)
             constrained_input_check = (
-                self._analyze_input_fn(constrained_code)
+                self._analyze_input_fn(constrained_output)
                 if self._analyze_input_fn
                 else None
             )
@@ -131,7 +132,7 @@ class ExperimentRunner:
                 else None
             )
             constrained_input_evaluation = (
-                self._evaluate_input_fn(constrained_code)
+                self._evaluate_input_fn(constrained_output)
                 if self._evaluate_input_fn
                 else None
             )
@@ -143,6 +144,11 @@ class ExperimentRunner:
             constrained_eval_output = (
                 constrained_input_evaluation.output
                 if constrained_input_evaluation
+                else None
+            )
+            constrained_output_correct = (
+                c.expected_output.strip() == constrained_eval_output.strip()
+                if c.expected_output and constrained_eval_output
                 else None
             )
 
@@ -192,19 +198,24 @@ class ExperimentRunner:
                 if unconstrained_input_evaluation
                 else None
             )
+            unconstrained_output_correct = (
+                c.expected_output.strip() == unconstrained_eval_output.strip()
+                if c.expected_output and unconstrained_eval_output
+                else None
+            )
 
             results.append(
                 ExperimentResult(
                     case=c,
                     # constrained section
-                    constrained_output_raw=constrained_raw,
-                    constrained_code=constrained_code,
+                    constrained_output=constrained_output,
                     constrained_parse_ok=constrained_ok,
                     constrained_syntax_errors=constrained_syntax_errors,
                     constrained_parse_errors=constrained_parse_errors,
                     constrained_semantic_errors=constrained_semantic_errors,
                     constrained_eval_ok=constrained_eval_ok,
                     constrained_eval_output=constrained_eval_output,
+                    constrained_output_correct=constrained_output_correct,
                     # unconstrained section
                     unconstrained_output_raw=unconstrained_raw,
                     unconstrained_code=unconstrained_code,
@@ -214,6 +225,7 @@ class ExperimentRunner:
                     unconstrained_semantic_errors=unconstrained_semantic_errors,
                     unconstrained_eval_ok=unconstrained_eval_ok,
                     unconstrained_eval_output=unconstrained_eval_output,
+                    unconstrained_output_correct=unconstrained_output_correct,
                 )
             )
 
@@ -244,9 +256,10 @@ class ExperimentRunner:
             parse_errors: Optional[int],
             semantic_errors: Optional[int],
             output_raw: Optional[str],
-            code: Optional[str],
+            extracted: Optional[str],
             eval_ok: Optional[bool],
             eval_output: Optional[str],
+            eval_output_correct: Optional[bool],
         ) -> None:
             print(f"[{title} PARSE OK] {parse_ok}")
             if syntax_errors is not None:
@@ -258,19 +271,23 @@ class ExperimentRunner:
 
             if eval_ok is not None:
                 print(f"[{title} EVAL OK] {eval_ok}")
+            if eval_output_correct is not None:
+                print(
+                    f"[{title} EVAL {'CORRECT' if eval_output_correct else 'INCORRECT'}]"
+                )
             if eval_output:
                 print(f"[{title} EVAL OUTPUT]")
                 print(eval_output.rstrip())
                 print("-" * 100)
 
             if output_raw is not None:
-                print(f"[{title} OUTPUT RAW]")
+                print(f"[{title} OUTPUT]")
                 print(output_raw.rstrip())
                 print("-" * 100)
 
-            if code is not None:
+            if extracted is not None:
                 print(f"[{title} CODE EXTRACTED]")
-                print(code.rstrip())
+                print(extracted.rstrip())
                 print("-" * 100)
 
         # Per-case output
@@ -289,9 +306,10 @@ class ExperimentRunner:
                 parse_errors=r.unconstrained_parse_errors,
                 semantic_errors=r.unconstrained_semantic_errors,
                 output_raw=r.unconstrained_output_raw,
-                code=r.unconstrained_code,
-                eval_ok=getattr(r, "unconstrained_eval_ok", None),
-                eval_output=getattr(r, "unconstrained_eval_output", None),
+                extracted=r.unconstrained_code,
+                eval_ok=r.unconstrained_eval_ok,
+                eval_output=r.unconstrained_eval_output,
+                eval_output_correct=r.unconstrained_output_correct,
             )
 
             _print_variant(
@@ -300,10 +318,11 @@ class ExperimentRunner:
                 syntax_errors=r.constrained_syntax_errors,
                 parse_errors=r.constrained_parse_errors,
                 semantic_errors=r.constrained_semantic_errors,
-                output_raw=r.constrained_output_raw,
-                code=r.constrained_code,
-                eval_ok=getattr(r, "constrained_eval_ok", None),
-                eval_output=getattr(r, "constrained_eval_output", None),
+                output_raw=r.constrained_output,
+                extracted=None,
+                eval_ok=r.constrained_eval_ok,
+                eval_output=r.constrained_eval_output,
+                eval_output_correct=r.constrained_output_correct,
             )
 
             print()
@@ -337,11 +356,18 @@ class ExperimentRunner:
         cons_sem = [r.constrained_semantic_errors for r in results]
 
         uncon_eval = [
-            getattr(r, "unconstrained_eval_ok", None)
+            r.unconstrained_eval_ok
             for r in results
             if r.unconstrained_output_raw is not None
         ]
-        cons_eval = [getattr(r, "constrained_eval_ok", None) for r in results]
+        cons_eval = [r.constrained_eval_ok for r in results]
+
+        uncon_eval_correct = [
+            r.unconstrained_output_correct
+            for r in results
+            if r.unconstrained_output_raw is not None
+        ]
+        cons_eval_correct = [r.constrained_output_correct for r in results]
 
         print("=" * 100)
         print("[SUMMARY]")
@@ -351,6 +377,8 @@ class ExperimentRunner:
         print(f"Unconstrained avg sem errs:    {_avg(uncon_sem)}")
         if any(v is not None for v in uncon_eval):
             print(f"Unconstrained eval success:    {_rate(uncon_eval)}")
+        if any(v is not None for v in uncon_eval_correct):
+            print(f"Unconstrained output correctness:    {_rate(uncon_eval_correct)}")
         print("-" * 100)
         print(f"Constrained   parse success:   {_rate(cons_ok)}")
         print(f"Constrained   avg syntax errs: {_avg(cons_syntax)}")
@@ -358,8 +386,9 @@ class ExperimentRunner:
         print(f"Constrained   avg sem errs:    {_avg(cons_sem)}")
         if any(v is not None for v in cons_eval):
             print(f"Constrained   eval success:    {_rate(cons_eval)}")
+        if any(v is not None for v in cons_eval_correct):
+            print(f"Constrained output correctness:    {_rate(cons_eval_correct)}")
         print("=" * 100)
-
 
     @staticmethod
     def _rate_fraction(values: list[Optional[bool]]) -> dict[str, float | int | None]:
@@ -415,6 +444,13 @@ class ExperimentRunner:
         ]
         cons_eval = [r.constrained_eval_ok for r in results]
 
+        uncon_eval_correct = [
+            r.unconstrained_output_correct
+            for r in results
+            if r.unconstrained_output_raw is not None
+        ]
+        cons_eval_correct = [r.constrained_output_correct for r in results]
+
         return {
             "cases_total": len(results),
             "unconstrained": {
@@ -423,6 +459,7 @@ class ExperimentRunner:
                 "avg_parse_errors": cls._avg_value(uncon_parse),
                 "avg_semantic_errors": cls._avg_value(uncon_sem),
                 "eval_success": cls._rate_fraction(uncon_eval),
+                "eval_correctness": cls._rate_fraction(uncon_eval_correct),
             },
             "constrained": {
                 "parse_success": cls._rate_fraction(cons_ok),
@@ -430,6 +467,7 @@ class ExperimentRunner:
                 "avg_parse_errors": cls._avg_value(cons_parse),
                 "avg_semantic_errors": cls._avg_value(cons_sem),
                 "eval_success": cls._rate_fraction(cons_eval),
+                "eval_correctness": cls._rate_fraction(cons_eval_correct),
             },
         }
 
