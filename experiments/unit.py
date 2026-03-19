@@ -82,52 +82,52 @@ def main() -> None:
         cases = [
             ExperimentCase(
                 name="func_add_int",
-                task="Generate a function `add(x: int, y: int) -> int` that returns `x + y`.",
+                task="Write a function named `add` that takes two integers and returns their sum.",
                 seed=1,
             ),
             ExperimentCase(
                 name="func_add_real",
-                task="Generate a function `add(x: real, y: real) -> real` that returns `x + y`.",
+                task="Write a function named `add` that takes two real numbers and returns their sum.",
                 seed=1,
             ),
             ExperimentCase(
                 name="let_decl",
-                task="Inside a function body, declare a variable `sum: int` initialized to `1 + 2`.",
+                task="Write a function that contains a local integer variable named `sum` initialized to `1 + 2`.",
                 seed=2,
             ),
             ExperimentCase(
                 name="return_stmt",
-                task="Generate a function `id(x: int) -> int` whose body is a single return statement.",
+                task="Write a function named `id` that takes an integer and returns it unchanged.",
                 seed=3,
             ),
             ExperimentCase(
                 name="if_else",
-                task="Generate a function `max2(a: int, b: int) -> int` using an if/else and return.",
+                task="Write a function named `max2` that returns the larger of two integers.",
                 seed=4,
             ),
             ExperimentCase(
                 name="while_loop",
-                task="Generate a function that uses a while-loop to sum integers from 1 to 10 and returns the sum.",
+                task="Write a function named `sum_to_ten` that returns the sum of the integers from 1 to 10 using a while loop.",
                 seed=5,
             ),
             ExperimentCase(
                 name="for_range",
-                task="Generate a function that iterates `i` from 0 to 10 inclusive and calls `println(i as str)` each iteration.",
+                task="Write a function named `print_numbers` that prints the integers from 0 to 10, one per line.",
                 seed=6,
             ),
             ExperimentCase(
                 name="initializer_new",
-                task="Generate a snippet that creates a 'Point' object with positional parameters 1 and 2.",
+                task="Define a struct named `Point` with integer fields `a` and `b`, and write a snippet that creates a `Point` value with `a = 1` and `b = 2`.",
                 seed=7,
             ),
             ExperimentCase(
                 name="cast_as",
-                task="Generate a snippet that casts `x` to type `int` using `as`.",
+                task="Write a snippet that defines a real value, converts it to an integer, and stores the result in a variable named `y`.",
                 seed=8,
             ),
             ExperimentCase(
                 name="two_funcs_main",
-                task="Generate two functions: `add(int,int)->int` and `main()` that calls add and prints the result using 'println' function. Use 'println(val as str)' to cast the value into a string",
+                task="Write a function named `add` that adds two integers, and a `main` function that prints the result of calling it with 1 and 2.",
                 seed=9,
             ),
         ]
@@ -139,16 +139,16 @@ def main() -> None:
         )
         results = runner.run(cases)
 
+        ExperimentRunner.print_results(results)
         ExperimentRunner.save_results(
             results,
             suite_name="unit",
             model_family=spec.family,
             model_key=spec.key,
-            run_name="sampled__rep-1.1__seeds-10",
+            run_name="sampled__seeds-10",
             metadata={
                 "model_id": spec.model_id,
                 "do_sample": True,
-                "repetition_penalty": 1.1,
                 "renormalize_logits": True,
                 "max_new_tokens": spec.max_new_tokens,
             },

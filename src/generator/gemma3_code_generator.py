@@ -171,7 +171,6 @@ class Gemma3CodeGenerator:
                 eos_token_id=stop_ids,
                 prefix_allowed_tokens_fn=mask_fn,
                 logits_processor=LogitsProcessorList([self.weight_processor]),
-                repetition_penalty=1.1,
                 renormalize_logits=True,
             )[0]
 

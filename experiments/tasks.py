@@ -37,7 +37,7 @@ def main() -> None:
 
         return wrapper
 
-    spec = get_model("gemma3-12b-it-4bit")
+    spec = get_model("gemma3-27b-it-4bit")
     ok, reason = can_attempt_load(spec)
     if not ok:
         print(f"[SKIP] {spec.display_name}: {reason}")
@@ -71,7 +71,6 @@ def main() -> None:
                     max_new_tokens=gen.config.max_new_tokens,
                     do_sample=True,
                     eos_token_id=stop_ids,
-                    repetition_penalty=1.1,
                     renormalize_logits=True,
                 )[0]
 
@@ -136,7 +135,7 @@ def main() -> None:
             ExperimentCase(
                 name="task_cast_print",
                 task=(
-                    "Write `main` that creates a real value 5.0, converts it to an integer, stores it in `y`, "
+                    "Write `main` that creates an integer value 5, converts it to a real, stores it in `y`, "
                     "and prints `y`."
                 ),
                 seed=7,
@@ -167,11 +166,10 @@ def main() -> None:
             suite_name="tasks",
             model_family=spec.family,
             model_key=spec.key,
-            run_name="sampled__rep-1.1__seeds-10",
+            run_name="sampled__seeds-10",
             metadata={
                 "model_id": spec.model_id,
                 "do_sample": True,
-                "repetition_penalty": 1.1,
                 "renormalize_logits": True,
                 "max_new_tokens": spec.max_new_tokens,
             },

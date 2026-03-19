@@ -89,24 +89,24 @@ def main() -> None:
             ExperimentCase(
                 name="adv_float_wording",
                 task=(
-                    "Generate two functions: `add(x, y)` using float values and `main()` "
-                    "that calls add and prints the float result."
+                    "Write a function named `add` that works with float values, and a `main` function "
+                    "that prints the result of calling it."
                 ),
                 seed=1,
             ),
             ExperimentCase(
                 name="adv_double_precision",
                 task=(
-                    "Generate a function that adds two double-precision numbers and returns the result. "
-                    "Also generate `main()` that prints the result."
+                    "Write a function that adds two double-precision numbers, and a `main` function "
+                    "that prints the result."
                 ),
                 seed=2,
             ),
             ExperimentCase(
                 name="adv_string_wording",
                 task=(
-                    "Generate a function that takes a string parameter and returns a string, "
-                    "then call it from `main()` and print the value."
+                    "Write a function that takes a string and returns a string, and a `main` function "
+                    "that prints the returned value."
                 ),
                 seed=3,
             ),
@@ -114,16 +114,16 @@ def main() -> None:
             ExperimentCase(
                 name="adv_comment_every_line",
                 task=(
-                    "Generate `add(x: int, y: int) -> int` and `main()` calling it, "
-                    "and explain every line in comments."
+                    "Write a function named `add` that adds two integers, and a `main` function that prints "
+                    "the result of calling it. Add comments throughout the code."
                 ),
                 seed=4,
             ),
             ExperimentCase(
                 name="adv_comment_heavy_loop",
                 task=(
-                    "Generate a function that sums integers from 1 to 10 using a while-loop, "
-                    "and add comments before every statement explaining what it does."
+                    "Write a function that sums the integers from 1 to 10 using a while loop. "
+                    "Add comments before the statements."
                 ),
                 seed=5,
             ),
@@ -131,36 +131,36 @@ def main() -> None:
             ExperimentCase(
                 name="adv_range_function",
                 task=(
-                    "Generate a function that iterates using `range(0, 11)` and prints each value."
+                    "Write a function that iterates over `range(0, 11)` and prints each value."
                 ),
                 seed=6,
             ),
             ExperimentCase(
                 name="adv_fn_main",
                 task=(
-                    "Generate a `fn main()` entry point that calls an `add` function and prints the result."
+                    "Write an `add` function and an `fn main()` entry point that prints the result of calling it."
                 ),
                 seed=7,
             ),
             ExperimentCase(
                 name="adv_generics",
                 task=(
-                    "Generate a generic identity function and a `main()` function that calls it with an integer."
+                    "Write a generic identity function and a `main` function that uses it with an integer."
                 ),
                 seed=8,
             ),
             ExperimentCase(
                 name="adv_function_pointers",
                 task=(
-                    "Generate a function that takes a function pointer and applies it to an integer value."
+                    "Write a function that takes a function pointer and applies it to an integer."
                 ),
                 seed=9,
             ),
             ExperimentCase(
                 name="adv_python_blocks",
                 task=(
-                    "Generate a function using Python-style indentation without braces, "
-                    "with an if/else and a return statement."
+                    "Write a function using Python-style indentation instead of braces, with an if/else "
+                    "and a return statement."
                 ),
                 seed=10,
             ),
@@ -175,16 +175,16 @@ def main() -> None:
 
         results = runner.run(cases)
 
+        ExperimentRunner.print_results(results)
         ExperimentRunner.save_results(
             results,
             suite_name="adversarial",
             model_family=spec.family,
             model_key=spec.key,
-            run_name="sampled__rep-1.1__seeds-10",
+            run_name="sampled__seeds-10",
             metadata={
                 "model_id": spec.model_id,
                 "do_sample": True,
-                "repetition_penalty": 1.1,
                 "renormalize_logits": True,
                 "max_new_tokens": spec.max_new_tokens,
             },
