@@ -37,7 +37,7 @@ def main() -> None:
 
         return wrapper
 
-    spec = get_model("gemma3-27b-it-4bit")
+    spec = get_model("gemma3-12b-it-4bit")
     ok, reason = can_attempt_load(spec)
     if not ok:
         print(f"[SKIP] {spec.display_name}: {reason}")

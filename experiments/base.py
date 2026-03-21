@@ -3,10 +3,11 @@ import os
 import sys
 import re
 import json
+import time
 
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Callable, Iterable, Optional
+from typing import Callable, Iterable, Optional, Sequence
 from src.compiler_client.responses import AnalyzeInputResponse, EvaluateInputResponse
 
 _FENCE_RE = re.compile(r"(?s)(```|~~~)(?:[^\n]*)\n(.*?)\1")
@@ -71,6 +72,7 @@ class ExperimentResult:
     constrained_eval_output: Optional[str] = None
     constrained_output_correct: Optional[bool] = None
     constrained_end_to_end_correct: Optional[bool] = None
+    constrained_runtime_s: float = 0
 
     unconstrained_output_raw: Optional[str] = None
     unconstrained_code: Optional[str] = None
@@ -82,6 +84,7 @@ class ExperimentResult:
     unconstrained_eval_output: Optional[str] = None
     unconstrained_output_correct: Optional[bool] = None
     unconstrained_end_to_end_correct: Optional[bool] = None
+    unconstrained_runtime_s: float = 0
 
 
 class ExperimentRunner:
@@ -109,7 +112,11 @@ class ExperimentRunner:
         results: list[ExperimentResult] = []
 
         for c in cases:
+            # Constrained mode
+            cons_start = time.perf_counter()
             constrained_output = self._constrained_fn(c)
+            cons_elapsed_s = time.perf_counter() - cons_start
+
             constrained_input_check = (
                 self._analyze_input_fn(constrained_output)
                 if self._analyze_input_fn
@@ -159,9 +166,13 @@ class ExperimentRunner:
                 else None
             )
 
+            # Unconstrained mode
+            uncon_start = time.perf_counter()
             unconstrained_raw = (
                 self._unconstrained_fn(c) if self._unconstrained_fn else None
             )
+            uncon_elapsed_s = time.perf_counter() - uncon_start
+
             unconstrained_code = (
                 extract_code(unconstrained_raw)
                 if unconstrained_raw is not None
@@ -229,6 +240,7 @@ class ExperimentRunner:
                     constrained_eval_output=constrained_eval_output,
                     constrained_output_correct=constrained_output_correct,
                     constrained_end_to_end_correct=constrained_end_to_end_correct,
+                    constrained_runtime_s=cons_elapsed_s,
                     # unconstrained section
                     unconstrained_output_raw=unconstrained_raw,
                     unconstrained_code=unconstrained_code,
@@ -240,6 +252,7 @@ class ExperimentRunner:
                     unconstrained_eval_output=unconstrained_eval_output,
                     unconstrained_output_correct=unconstrained_output_correct,
                     unconstrained_end_to_end_correct=unconstrained_end_to_end_correct,
+                    unconstrained_runtime_s=uncon_elapsed_s,
                 )
             )
 
@@ -256,7 +269,7 @@ class ExperimentRunner:
             ok = sum(1 for v in vals if v)
             return f"{ok}/{len(vals)} = {ok / len(vals):.1%}"
 
-        def _avg(values: list[Optional[int]]) -> str:
+        def _avg(values: Sequence[Optional[int | float]]) -> str:
             vals = [v for v in values if v is not None]
             if not vals:
                 return "n/a"
@@ -275,7 +288,9 @@ class ExperimentRunner:
             eval_output: Optional[str],
             eval_output_correct: Optional[bool],
             end_to_end_correct: Optional[bool],
+            runtime_s: float,
         ) -> None:
+            print(f"[{title} EXECUTED IN] {runtime_s: .2f} s")
             print(f"[{title} PARSE OK] {parse_ok}")
             if syntax_errors is not None:
                 print(f"[{title} SYNTAX ERRORS] {syntax_errors}")
@@ -330,6 +345,7 @@ class ExperimentRunner:
                 eval_output=r.unconstrained_eval_output,
                 eval_output_correct=r.unconstrained_output_correct,
                 end_to_end_correct=r.unconstrained_end_to_end_correct,
+                runtime_s=r.unconstrained_runtime_s,
             )
 
             _print_variant(
@@ -344,6 +360,7 @@ class ExperimentRunner:
                 eval_output=r.constrained_eval_output,
                 eval_output_correct=r.constrained_output_correct,
                 end_to_end_correct=r.constrained_end_to_end_correct,
+                runtime_s=r.constrained_runtime_s,
             )
 
             print()
@@ -397,8 +414,13 @@ class ExperimentRunner:
         ]
         cons_end_to_end = [r.constrained_end_to_end_correct for r in results]
 
+        uncon_runtimes = [r.unconstrained_runtime_s for r in results
+            if r.unconstrained_output_raw is not None]
+        cons_runtimes = [r.constrained_runtime_s for r in results]
+
         print("=" * 100)
         print("[SUMMARY]")
+        print(f"Unconstrained average runtime s:   {_avg(uncon_runtimes)}")
         print(f"Unconstrained parse success:    {_rate(uncon_ok)}")
         print(f"Unconstrained avg syntax errs: {_avg(uncon_syntax)}")
         print(f"Unconstrained avg parse errs:  {_avg(uncon_parse)}")
@@ -410,6 +432,7 @@ class ExperimentRunner:
         if any(v is not None for v in uncon_end_to_end):
             print(f"Unconstrained end-to-end correctness: {_rate(uncon_end_to_end)}")
         print("-" * 100)
+        print(f"Unconstrained average runtime s:   {_avg(cons_runtimes)}")
         print(f"Constrained   parse success:   {_rate(cons_ok)}")
         print(f"Constrained   avg syntax errs: {_avg(cons_syntax)}")
         print(f"Constrained   avg parse errs:  {_avg(cons_parse)}")
