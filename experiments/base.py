@@ -414,8 +414,11 @@ class ExperimentRunner:
         ]
         cons_end_to_end = [r.constrained_end_to_end_correct for r in results]
 
-        uncon_runtimes = [r.unconstrained_runtime_s for r in results
-            if r.unconstrained_output_raw is not None]
+        uncon_runtimes = [
+            r.unconstrained_runtime_s
+            for r in results
+            if r.unconstrained_output_raw is not None
+        ]
         cons_runtimes = [r.constrained_runtime_s for r in results]
 
         print("=" * 100)
@@ -432,7 +435,7 @@ class ExperimentRunner:
         if any(v is not None for v in uncon_end_to_end):
             print(f"Unconstrained end-to-end correctness: {_rate(uncon_end_to_end)}")
         print("-" * 100)
-        print(f"Unconstrained average runtime s:   {_avg(cons_runtimes)}")
+        print(f"Constrained average runtime s:   {_avg(cons_runtimes)}")
         print(f"Constrained   parse success:   {_rate(cons_ok)}")
         print(f"Constrained   avg syntax errs: {_avg(cons_syntax)}")
         print(f"Constrained   avg parse errs:  {_avg(cons_parse)}")
@@ -456,7 +459,7 @@ class ExperimentRunner:
         return {"ok": ok, "total": total, "rate": ok / total}
 
     @staticmethod
-    def _avg_value(values: list[Optional[int]]) -> float | None:
+    def _avg_value(values: Sequence[Optional[int | float]]) -> float | None:
         vals = [v for v in values if v is not None]
         if not vals:
             return None
@@ -514,6 +517,13 @@ class ExperimentRunner:
         ]
         cons_end_to_end = [r.constrained_end_to_end_correct for r in results]
 
+        uncon_runtimes = [
+            r.unconstrained_runtime_s
+            for r in results
+            if r.unconstrained_output_raw is not None
+        ]
+        cons_runtimes = [r.constrained_runtime_s for r in results]
+
         return {
             "cases_total": len(results),
             "unconstrained": {
@@ -524,6 +534,7 @@ class ExperimentRunner:
                 "eval_success": cls._rate_fraction(uncon_eval),
                 "eval_correctness": cls._rate_fraction(uncon_eval_correct),
                 "end_to_end_correctness": cls._rate_fraction(uncon_end_to_end),
+                "avg_runtime_s": cls._avg_value(uncon_runtimes),
             },
             "constrained": {
                 "parse_success": cls._rate_fraction(cons_ok),
@@ -533,6 +544,7 @@ class ExperimentRunner:
                 "eval_success": cls._rate_fraction(cons_eval),
                 "eval_correctness": cls._rate_fraction(cons_eval_correct),
                 "end_to_end_correctness": cls._rate_fraction(cons_end_to_end),
+                "avg_runtime_s": cls._avg_value(cons_runtimes),
             },
         }
 

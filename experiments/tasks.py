@@ -37,7 +37,7 @@ def main() -> None:
 
         return wrapper
 
-    spec = get_model("gemma3-12b-it-4bit")
+    spec = get_model("gemma3-4b-it")
     ok, reason = can_attempt_load(spec)
     if not ok:
         print(f"[SKIP] {spec.display_name}: {reason}")
@@ -108,11 +108,11 @@ def main() -> None:
             ExperimentCase(
                 name="task_print_range_for",
                 task=(
-                    "Write a function named `print_numbers` that prints the integers from 0 to 10 inclusive, "
+                    "Write a function named `print_numbers` that prints the integers from 0 to 9, "
                     "one per line. Also write `main` that calls it."
                 ),
                 seed=4,
-                expected_output="0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10",
+                expected_output="0\n1\n2\n3\n4\n5\n6\n7\n8\n9",
             ),
             ExperimentCase(
                 name="task_max2_if_else",
@@ -152,6 +152,20 @@ def main() -> None:
             ),
         ]
 
+        full_cases: list[ExperimentCase] = []
+
+        for case in cases:
+            full_cases.append(case)
+            for seed_offset in (42, 100):
+                full_cases.append(
+                    ExperimentCase(
+                        name=case.name,
+                        task=case.task,
+                        seed=case.seed + seed_offset,
+                        expected_output=case.expected_output,
+                    )
+                )
+
         runner = ExperimentRunner(
             constrained_fn=generate_constrained,
             unconstrained_fn=generate_unconstrained,
@@ -159,7 +173,7 @@ def main() -> None:
             evaluate_input_fn=evaluate_input_fn(),
         )
 
-        results = runner.run(cases)
+        results = runner.run(full_cases)
         ExperimentRunner.print_results(results)
         ExperimentRunner.save_results(
             results,

@@ -33,7 +33,7 @@ def main() -> None:
 
         return wrapper
 
-    spec = get_model("gemma3-12b-it-4bit")
+    spec = get_model("gemma3-27b-it-4bit")
     ok, reason = can_attempt_load(spec)
     if not ok:
         print(f"[SKIP] {spec.display_name}: {reason}")
@@ -166,6 +166,20 @@ def main() -> None:
             ),
         ]
 
+        full_cases: list[ExperimentCase] = []
+
+        for case in cases:
+            full_cases.append(case)
+            for seed_offset in (42, 100):
+                full_cases.append(
+                    ExperimentCase(
+                        name=case.name,
+                        task=case.task,
+                        seed=case.seed + seed_offset,
+                        expected_output=case.expected_output,
+                    )
+                )
+
         runner = ExperimentRunner(
             constrained_fn=generate_constrained,
             unconstrained_fn=generate_unconstrained,
@@ -173,7 +187,7 @@ def main() -> None:
             evaluate_input_fn=evaluate_input_fn(),
         )
 
-        results = runner.run(cases)
+        results = runner.run(full_cases)
 
         ExperimentRunner.print_results(results)
         ExperimentRunner.save_results(
